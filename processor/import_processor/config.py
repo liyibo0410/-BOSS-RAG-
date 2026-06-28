@@ -1,0 +1,150 @@
+# knowledge/processor/import_processor/config.py
+
+"""
+导入流程配置管理模块
+
+集中管理所有配置项，支持环境变量覆盖
+"""
+# 骨架
+from dataclasses import dataclass, field
+from typing import Set, Optional, Tuple
+import os
+from dotenv import load_dotenv
+
+# 加载 .env 文件
+load_dotenv(override=True)
+
+
+@dataclass
+class ImportConfig:
+    """导入流程配置"""
+
+    # ==================== 文档处理配置 ====================
+    max_content_length: int = 2000      # 切片最大长度
+    img_content_length: int = 200       # 图片上下文最大长度
+    min_content_length: int = 500       # 合并短内容的最小长度
+    overlap_sentences: int = 1          # 句子级切分时重叠句数
+    item_name_chunk_k: int = 3          # 商品名识别时使用的切片数量
+    item_name_chunk_size: int = 2500    # 商品名识别时使用的切片内容长度
+
+    # 支持的图片扩展名
+    image_extensions: Set[str] = field(
+        default_factory=lambda: {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
+    )
+
+    # ==================== MinerU 配置 ====================
+    mineru_api_token: str = field(
+        default_factory=lambda: os.getenv("MINERU_API_TOKEN", "")
+    )
+    mineru_base_url: str = field(
+        default_factory=lambda: os.getenv("MINERU_BASE_URL", "")
+    )
+    # ==================== LLM 配置 ====================
+    openai_api_base: str = field(
+        default_factory=lambda: os.getenv("OPENAI_API_BASE", "")
+    )
+
+
+    openai_api_key: str = field(
+        default_factory=lambda: os.getenv("OPENAI_API_KEY", "")
+    )
+    vl_model: str = field(
+        default_factory=lambda: os.getenv("VL_MODEL", "")
+    )
+    item_model: str = field(
+        default_factory=lambda: os.getenv("ITEM_MODEL", "")
+    )
+    default_model: str = field(
+        default_factory=lambda: os.getenv("MODEL", "")
+    )
+    llm_model: str = field(
+        default_factory=lambda: os.getenv("LLM_DEFAULT_MODEL", "")
+    )
+    llm_temperature: float = field(
+        default_factory=lambda: float(os.getenv("LLM_DEFAULT_TEMPERATURE", "0.7"))
+    )
+
+    # ==================== Milvus 配置 ====================
+    milvus_url: str = field(
+        default_factory=lambda: os.getenv("MILVUS_URL", "")
+    )
+    chunks_collection: str = field(
+        default_factory=lambda: os.getenv("CHUNKS_COLLECTION", "")
+    )
+    item_name_collection: str = field(
+        default_factory=lambda: os.getenv("ITEM_NAME_COLLECTION", "")
+    )
+
+    # ==================== MinIO 配置 ====================
+    minio_endpoint: str = field(
+        default_factory=lambda: os.getenv("MINIO_ENDPOINT", "192.168.10.100:9000")
+    )
+    minio_access_key: str = field(
+        default_factory=lambda: os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+    )
+    minio_secret_key: str = field(
+        default_factory=lambda: os.getenv("MINIO_SECRET_KEY", "minioadmin")
+    )
+    minio_bucket: str = field(
+        default_factory=lambda: os.getenv("MINIO_BUCKET_NAME", "knowledge-base")
+    )
+    minio_img_dir: str = field(
+        default_factory=lambda: os.getenv("MINIO_IMG_DIR", "images")
+    )
+    minio_secure: bool = field(
+        default_factory=lambda: os.getenv("MINIO_SECURE", "False").lower() == "true"
+    )
+
+    # ==================== 向量配置 ====================
+    embedding_dim: int = field(
+        default_factory=lambda: int(os.getenv("EMBEDDING_DIM", "1024"))
+    )
+
+    embedding_batch_size: int = 8
+
+    # ==================== 速率限制 ====================
+    requests_per_minute: int = 15       # 图片总结 API 速率限制
+
+    @classmethod
+    def from_env(cls) -> "ImportConfig":
+        """从环境变量加载配置"""
+        return cls()
+
+    def get_minio_base_url(self) -> str:
+        """获取 MinIO 基础 URL"""
+        protocol = "https://" if self.minio_secure else "http://"
+        return protocol + f"{self.minio_endpoint}"
+
+    def get_minio_img_url(self, object_name: str) -> str:
+        """获取 MinIO 图片完整访问 URL"""
+        return f"{self.get_minio_base_url()}/{self.minio_bucket}/{object_name}"
+
+
+# ==================== 全局单例 ====================
+_config: Optional[ImportConfig] = None
+
+
+def get_config() -> ImportConfig:
+    """获取配置单例"""
+    global _config
+    if _config is None:
+        _config = ImportConfig.from_env()
+    return _config
+
+
+if __name__ == "__main__":
+    a = get_config()
+    print(a.get_minio_base_url())
+    # a = get_config()
+    # print(a.vl_model)
+    # print(a.default_model)
+
+
+    # llm = init_chat_model(model=a.default_model,  # 文本模型
+    #                              model_provider=a.item_model,
+    #                              api_key=a.openai_api_key,
+    #                              base_url=a.openai_api_base
+    # llm = init_chat_model(model="deepseek-ai/DeepSeek-V4-Flash",  # 文本模型
+    #                              model_provider="openai",
+    #                              api_key=os.getenv("SILICONFLOW_API_KEY"),
+    #                              base_url=os.getenv("SILICONFLOW_BASE_URL"))
