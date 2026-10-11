@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>BOSS 智库 · RAG 评估可视化报告</title>
+<style>
+:root{
+  --bg:#0a0e1a;
+  --bg-2:#0f1424;
+  --panel:#141a2e;
+  --panel-2:#1a2140;
+  --line:rgba(120,160,220,.14);
+  --line-2:rgba(120,160,220,.28);
+  --text:#e6ecff;
+  --muted:#8694b8;
+  --dim:#5a6886;
+  --brand:#5b8cff;
+  --brand-2:#7c5bff;
+  --cyan:#36d6c4;
+  --green:#4ade80;
+  --amber:#fbbf24;
+  --red:#f87171;
+  --pink:#f472b6;
+  --grad:linear-gradient(135deg,#5b8cff 0%,#7c5bff 50%,#c45bff 100%);
+  --grad-soft:linear-gradient(135deg,rgba(91,140,255,.18) 0%,rgba(124,91,255,.18) 50%,rgba(196,91,255,.18) 100%);
+  --shadow:0 10px 40px rgba(0,0,0,.45);
+  --r:14px;
+  --r-sm:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+body{background:
+  radial-gradient(1200px 600px at 80% -10%,rgba(124,91,255,.15),transparent 60%),
+  radial-gradient(900px 500px at -10% 10%,rgba(91,140,255,.12),transparent 60%),
+  var(--bg);
+min-height:100vh;overflow-x:hidden}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+a{color:inherit;text-decoration:none}
+
+/* ===== HERO ===== */
+.hero{position:relative;padding:88px 0 56px;border-bottom:1px solid var(--line)}
+.hero::before{content:"";position:absolute;inset:0;background:
+  linear-gradient(transparent 0,transparent 49.6%,var(--line-2) 49.8%,transparent 50.2%),
+  repeating-linear-gradient(0deg,transparent 0,transparent 39px,rgba(120,160,220,.04) 40px);
+  mask:linear-gradient(180deg,rgba(0,0,0,.8),transparent 80%);
+  pointer-events:none}
+.kicker{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border:1px solid var(--line-2);border-radius:999px;background:rgba(91,140,255,.08);color:#b6c5ff;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.kicker .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.4;transform:scale(.85)}}
+.hero h1{font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1.1;margin:18px 0 14px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-.02em}
+.hero .sub{color:var(--muted);font-size:17px;max-width:780px;margin-bottom:32px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px}
+.meta-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);font-size:13px;color:var(--muted)}
+.meta-chip strong{color:var(--text);font-weight:600}
+
+/* ===== NAV ===== */
+.nav{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.nav-inner{display:flex;gap:4px;overflow-x:auto;padding:14px 0;scrollbar-width:none}
+.nav-inner::-webkit-scrollbar{display:none}
+.nav a{padding:8px 16px;border-radius:8px;font-size:13px;color:var(--muted);white-space:nowrap;transition:.2s}
+.nav a:hover,.nav a.active{background:var(--panel);color:var(--text)}
+
+/* ===== SECTION ===== */
+section{padding:64px 0;border-bottom:1px solid var(--line)}
+.sec-head{margin-bottom:36px}
+.sec-tag{display:inline-block;font-size:11px;letter-spacing:.18em;color:var(--brand);font-weight:700;margin-bottom:10px}
+.sec-head h2{font-size:30px;font-weight:700;margin-bottom:8px;letter-spacing:-.01em}
+.sec-head .desc{color:var(--muted);font-size:15px;max-width:760px}
+
+/* ===== KPI CARDS ===== */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:40px}
+@media (max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+.kpi{position:relative;padding:22px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);overflow:hidden;transition:.25s}
+.kpi:hover{border-color:var(--line-2);transform:translateY(-2px);box-shadow:var(--shadow)}
+.kpi::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:var(--grad)}
+.kpi.k-corr::before{background:linear-gradient(90deg,#5b8cff,#7c5bff)}
+.kpi.k-faith::before{background:linear-gradient(90deg,#36d6c4,#5b8cff)}
+.kpi.k-rel::before{background:linear-gradient(90deg,#4ade80,#36d6c4)}
+.kpi.k-prec::before{background:linear-gradient(90deg,#fbbf24,#f472b6)}
+.kpi.k-rec::before{background:linear-gradient(90deg,#f87171,#fbbf24)}
+.kpi-label{font-size:12px;color:var(--dim);letter-spacing:.05em;text-transform:uppercase;font-weight:600;margin-bottom:10px}
+.kpi-val{font-size:34px;font-weight:800;line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.kpi-bar{margin-top:14px;height:4px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden}
+.kpi-bar i{display:block;height:100%;background:var(--grad);border-radius:99px;transition:width 1.6s cubic-bezier(.2,.7,.2,1)}
+.kpi-sub{margin-top:8px;font-size:11px;color:var(--dim)}
+
+/* ===== CARDS / GRID ===== */
+.grid{display:grid;gap:18px}
+.g-2{grid-template-columns:repeat(2,1fr)}
+.g-3{grid-template-columns:repeat(3,1fr)}
+@media (max-width:800px){.g-2,.g-3{grid-template-columns:1fr}}
+.card{padding:22px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.card h3{font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.card h3 .ic{width:28px;height:28px;border-radius:8px;background:var(--grad-soft);display:inline-flex;align-items:center;justify-content:center;color:var(--brand);font-weight:700;font-size:13px}
+.card p{color:var(--muted);font-size:14px}
+
+/* ===== CHART CONTAINER ===== */
+.chart-wrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:24px;margin-bottom:20px}
+.chart-title{font-size:15px;font-weight:600;margin-bottom:4px}
+.chart-sub{font-size:12px;color:var(--dim);margin-bottom:20px}
+
+/* ===== TABLE ===== */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th,.tbl td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--line)}
+.tbl th{color:var(--dim);font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;background:rgba(91,140,255,.04)}
+.tbl tr:hover td{background:rgba(91,140,255,.04)}
+.tbl .num{font-family:"SF Mono","JetBrains Mono",monospace;font-weight:600;color:var(--text)}
+.badge{display:inline-flex;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;font-family:"SF Mono","JetBrains Mono",monospace}
+.b-good{background:rgba(74,222,128,.12);color:var(--green)}
+.b-mid{background:rgba(251,191,36,.12);color:var(--amber)}
+.b-bad{background:rgba(248,113,113,.12);color:var(--red)}
+
+/* ===== FLOW ===== */
+.flow{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;margin:24px 0}
+.flow .node{flex:1;min-width:130px;padding:14px 12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);text-align:center;position:relative}
+.flow .node .lbl{font-size:11px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.flow .node .nm{font-size:13px;font-weight:600;color:var(--text)}
+.flow .arrow{display:flex;align-items:center;color:var(--brand);font-size:18px;font-weight:700}
+
+/* ===== TIMELINE / STEP ===== */
+.steps{display:grid;gap:14px}
+.step{display:grid;grid-template-columns:48px 1fr;gap:16px;padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.step .idx{width:48px;height:48px;border-radius:12px;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px}
+.step h4{font-size:15px;margin-bottom:6px}
+.step p{font-size:13px;color:var(--muted)}
+
+/* ===== Q&A ===== */
+.qa{display:flex;flex-direction:column;gap:12px}
+.qa-item{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.qa-q{padding:16px 20px;display:flex;gap:14px;cursor:pointer;align-items:flex-start}
+.qa-q .tag{flex-shrink:0;width:28px;height:28px;border-radius:8px;background:var(--grad-soft);color:var(--brand);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.qa-q .qtxt{font-size:14px;font-weight:600;line-height:1.5;flex:1}
+.qa-q .chev{margin-left:auto;color:var(--dim);transition:.3s;font-size:14px}
+.qa-a{display:none;padding:0 20px 20px 62px;color:var(--muted);font-size:13.5px;line-height:1.7;border-top:1px dashed var(--line);margin-top:0}
+.qa-a.show{display:block}
+.qa-a .gt{background:rgba(74,222,128,.06);border-left:3px solid var(--green);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0;font-size:13px;color:#c9efd4}
+.qa-a .gen{background:rgba(91,140,255,.06);border-left:3px solid var(--brand);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0;font-size:13px;color:#cfd8ff}
+.qa-a .metrics{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.qa-a .m{padding:5px 10px;background:var(--panel-2);border-radius:6px;font-size:12px;font-family:"SF Mono",monospace;color:var(--muted)}
+.qa-a .m strong{color:var(--text)}
+.qa-item.open .qa-q .chev{transform:rotate(180deg)}
+
+/* ===== FOOTER ===== */
+footer{padding:40px 0;text-align:center;color:var(--dim);font-size:12px;border-top:1px solid var(--line)}
+footer .top{display:inline-block;margin-bottom:14px;padding:8px 18px;border:1px solid var(--line-2);border-radius:99px;color:var(--text);font-size:13px;cursor:pointer;transition:.2s}
+footer .top:hover{background:var(--panel)}
+
+/* ===== ANIMATIONS ===== */
+.reveal{opacity:0;transform:translateY(20px);transition:.7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:translateY(0)}
+
+/* tag colors for chart series */
+.lc-faith{color:var(--cyan)}
+.lc-rel{color:var(--green)}
+.lc-prec{color:var(--amber)}
+.lc-rec{color:var(--red)}
+.lc-corr{color:var(--brand-2)}
+</style>
+</head>
+<body>
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <span class="kicker"><span class="dot"></span>BOSS 智库 · RAG 质量评估</span>
+    <h1>HAK180 烫金机问答 · 多维度评估</h1>
+    <p class="sub">基于 Ragas 框架的批量评估报告 · 3 条 HAK180 烫金机安全手册相关问题 · 含 Faithfulness / Answer Relevancy / Context Precision / Context Recall / Answer Correctness 五项指标</p>
+    <div class="hero-meta">
+      <div class="meta-chip"><strong>评估框架</strong>Ragas</div>
+      <div class="meta-chip"><strong>测试集</strong>eval/qa.csv · 3 条</div>
+      <div class="meta-chip"><strong>LLM</strong>DashScope 兼容模式</div>
+      <div class="meta-chip"><strong>Embedding</strong>BGE-M3</div>
+      <div class="meta-chip"><strong>执行时间</strong>2026-09-07 20:36 → 20:39</div>
+      <div class="meta-chip"><strong>评估耗时</strong>172.35s</div>
+    </div>
+  </div>
+</section>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="wrap">
+    <div class="nav-inner">
+      <a href="#overview">01 · 总体概览</a>
+      <a href="#flow">02 · 评估流程</a>
+      <a href="#charts">03 · 指标可视化</a>
+      <a href="#cases">04 · 逐题对比</a>
+      <a href="#pipeline">05 · RAG 链路</a>
+      <a href="#qa">06 · 问答详情</a>
+      <a href="#conclusion">07 · 结论与建议</a>
+    </div>
+  </div>
+</nav>
+
+<!-- 01 OVERVIEW -->
+<section id="overview">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-tag">01 · OVERVIEW</div>
+      <h2>五项指标总体得分</h2>
+      <p class="desc">3 条样本平均得分。Answer Recall 满分说明检索环节召回了全部 ground-truth 所需证据；Faithfulness 与 Answer Correctness 是后续主要优化方向。</p>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi k-faith reveal"><div class="kpi-label">Faithfulness 忠实度</div><div class="kpi-val" data-count="0.7672">0.0000</div><div class="kpi-bar"><i style="width:0%" data-w="76.72%"></i></div><div class="kpi-sub">回答对上下文的忠实程度</div></div>
+      <div class="kpi k-rel reveal"><div class="kpi-label">Answer Relevancy 相关性</div><div class="kpi-val" data-count="0.9566">0.0000</div><div class="kpi-bar"><i style="width:0%" data-w="95.66%"></i></div><div class="kpi-sub">回答与问题的相关程度</div></div>
+      <div class="kpi k-prec reveal"><div class="kpi-label">Context Precision 精度</div><div class="kpi-val" data-count="0.8565">0.0000</div><div class="kpi-bar"><i style="width:0%" data-w="85.65%"></i></div><div class="kpi-sub">检索结果中相关条目的占比</div></div>
+      <div class="kpi k-rec reveal"><div class="kpi-label">Context Recall 召回</div><div class="kpi-val" data-count="1.0000">0.0000</div><div class="kpi-bar"><i style="width:0%" data-w="100%"></i></div><div class="kpi-sub">ground-truth 证据是否被召回</div></div>
+      <div class="kpi k-corr reveal"><div class="kpi-label">Answer Correctness 正确性</div><div class="kpi-val" data-count="0.8307">0.0000</div><div class="kpi-bar"><i style="width:0%" data-w="83.07%"></i></div><div class="kpi-sub">回答与 ground-truth 的一致度</div></div>
+    </div>
+    <div class="g-3">
+      <div class="card reveal"><h3><span class="ic">!</span>亮点</h3><p>Context Recall = 1.0000，说明 Milvus 混合检索（dense + sparse + BGE-M3）成功召回了所有 ground-truth 所需证据，召回链路稳定。</p></div>
+      <div class="card reveal"><h3><span class="ic">!</span>次短板</h3><p>Faithfulness 0.7672 与 Answer Correctness 0.8307 仍有提升空间，主要原因是回答中存在对检索内容的过度展开（如加入产品介绍），导致与 ground-truth 措辞不完全对齐。</p></div>
+      <div class="card reveal"><h3><span class="ic">!</span>关注点</h3><p>Answer Relevancy 0.9566 整体很高，但 Case 3（起搏器）Faithfulness 仅 0.4444，需重点排查回答中是否存在脱离证据的臆测内容。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 FLOW -->
+<section id="flow">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-tag">02 · PIPELINE</div>
+      <h2>评估执行流程</h2>
+      <p class="desc">从测试集加载 → RAG 链路调用 → Ragas 多维度打分 → 结果落盘的全过程。</p>
+    </div>
+    <div class="flow reveal">
+      <div class="node"><div class="lbl">Step 1</div><div class="nm">加载 qa.csv</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="lbl">Step 2</div><div class="nm">RAG 链路 × 3</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="lbl">Step 3</div><div class="nm">初始化评估模型</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="lbl">Step 4</div><div class="nm">Ragas 评估 × 15</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="lbl">Step 5</div><div class="nm">写入 qa_result.csv</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="lbl">Step 6</div><div class="nm">打印平均分</div></div>
+    </div>
+    <div class="steps reveal">
+      <div class="step"><div class="idx">1</div><div><h4>加载测试集</h4><p>从 <code>eval/qa.csv</code> 读取 3 条 HAK180 烫金机相关问题，含 ground-truth 标准答案。</p></div></div>
+      <div class="step"><div class="idx">2</div><div><h4>执行 RAG 检索与生成</h4><p>逐条进入 LangGraph 链路：<code>item_name_confirm</code> → <code>search_embedding_hyde</code> → <code>web_search_mcp</code> → <code>milvus 混合检索</code> → rerank → LLM 生成。每条耗时约 7-8s。</p></div></div>
+      <div class="step"><div class="idx">3</div><div><h4>初始化评估模型</h4><p>实例化评估用 LLM（DashScope qwen-plus）与 BGE-M3 Embeddings，用于 Ragas 内部多次裁判调用。</p></div></div>
+      <div class="step"><div class="idx">4</div><div><h4>Ragas 多维度评估</h4><p>3 条样本 × 5 指标 = 15 次单元评估，总耗时 172.35s，平均每单元 ≈ 11.5s，含若干 LLM 调用。</p></div></div>
+      <div class="step"><div class="idx">5</div><div><h4>保存明细结果</h4><p>将每条样本的 context / answer / 5 项指标写入 <code>eval/qa_result.csv</code>。</p></div></div>
+      <div class="step"><div class="idx">6</div><div><h4>输出平均分</h4><p>在控制台打印五项指标均值，作为系统级质量快照。</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 CHARTS -->
+<section id="charts" data-page-node-id="JyRcqjB7jBqbgWjhsAsZS5">
+  <div class="wrap" data-page-node-id="ttYj49DTNQPgdLiOC2EH6E">
+    <div class="sec-head reveal" data-page-node-id="3YXL4fAi18cBLx25UEn5TE">
+      <div class="sec-tag" data-page-node-id="TGcDjZTPuG4g9eXUwXbGLG">03 · VISUALIZATION</div>
+      <h2 data-page-node-id="pja7pD159yEFZaGF8MGhOB">指标可视化</h2>
+      <p class="desc" data-page-node-id="kJI3dYjWQ3xkTTspHijo77">三张图：五指标雷达对比 / 三案例逐题柱状 / Faithfulness vs Correctness 散点。</p>
+    </div>
+
+    <!-- Radar -->
+    <div class="chart-wrap reveal" data-page-node-id="DpHomx7IgorvZqH9jc916n">
+      <div class="chart-title" data-page-node-id="5NjrQe6QEDJWaHUvW5R4hU">图 1 · 五项指标雷达图（平均分 vs 单题）</div>
+      <div class="chart-sub" data-page-node-id="aiXysRt9e84RV9LoLCw5Au">越靠外环分数越高（满分 1.0）</div>
+      <svg viewBox="0 0 680 380" style="width:100%;height:auto;max-height:420px" data-page-node-id="rpsoK94Y1MbFuLBYiYlH1I">
+        <defs data-page-node-id="yiTY0secFCdCHMzwFu9RDl">
+          <radialGradient id="rg-rad" cx="50%" cy="50%" r="50%" data-page-node-id="Boxj5Mhn76fS304X4pOS64">
+            <stop offset="0%" stop-color="#5b8cff" stop-opacity="0.35" data-page-node-id="5KIblrquZ0p1J8TVah1Kgc"/>
+            <stop offset="100%" stop-color="#7c5bff" stop-opacity="0.05" data-page-node-id="vDylP02LOmfEkjzUmCwPU1"/>
+          </radialGradient>
+        </defs>
+        <!-- 5-axis pentagon, center (340,195), R=140 -->
+        <!-- Grid rings -->
+        <g stroke="rgba(120,160,220,0.18)" fill="none" data-page-node-id="HFkV0wFmHTsGFlexSaHz41">
+          <polygon points="340,55 471,153 422,303 258,303 209,153" data-page-node-id="YDYR4fod8hnvNQ26mLt5tg"/>
+          <polygon points="340,95 438,168 401,283 279,283 242,168" data-page-node-id="CojWRcMC1mArNPCzhgkk8V"/>
+          <polygon points="340,135 405,183 380,263 300,263 275,183" data-page-node-id="BIwgPjpffsq76kH8i0CZ3t"/>
+          <polygon points="340,175 372,198 359,243 321,243 308,198" data-page-node-id="B6CvWcmnpWIOebGSBAW0dT"/>
+        </g>
+        <!-- Axis lines -->
+        <g stroke="rgba(120,160,220,0.25)" data-page-node-id="BKoJljzYmHnvEANtmxHa8U">
+          <line x1="340" y1="195" x2="340" y2="55" data-page-node-id="wDNkHz2UvHLVnUPsgpgDMW"/>
+          <line x1="340" y1="195" x2="471" y2="153" data-page-node-id="EtIGuFE41V8CntWFvbtWjH"/>
+          <line x1="340" y1="195" x2="422" y2="303" data-page-node-id="TmYTlDyKr6P2wrFt5wuzmb"/>
+          <line x1="340" y1="195" x2="258" y2="303" data-page-node-id="QHDDsdHKEOjfCXmIl3QWbf"/>
+          <line x1="340" y1="195" x2="209" y2="153" data-page-node-id="xMnDTXKvJBKSP7JCULz9IF"/>
+        </g>
+        <!-- Labels -->
+        <g font-size="12" font-family="-apple-system,sans-serif" fill="#8694b8" data-page-node-id="mxeLqcwSWe8fU4pVXIpU0O">
+          <text x="340" y="42" text-anchor="middle" data-page-node-id="0IcvpTVHc30qTLSffqjR5r">Faithfulness</text>
+          <text x="488" y="156" text-anchor="middle" data-page-node-id="hVxUT35pFHy5bpJ6fyFpx9">Answer Relevancy</text>
+          <text x="438" y="320" text-anchor="middle" data-page-node-id="SCX0uOKwFPaNlDotiSvabF">Context Precision</text>
+          <text x="242" y="320" text-anchor="middle" data-page-node-id="0C7zNrANqVtVaThzWfk6iU">Context Recall</text>
+          <text x="192" y="156" text-anchor="middle" data-page-node-id="VokMUdQvoFUrt55MoCTspl">Answer Correctness</text>
+        </g>
+        <!-- Avg polygon (score * 140)  F=0.7672 R=0.9566 P=0.8565 Rc=1.0 C=0.8307 -->
+        <!-- vertices at radius 140 -->
+        <!-- Avg -->
+        <polygon points="340,87.6 473.9,156.1 459.9,283.2 258,195 326.3,165.6"
+          fill="url(#rg-rad)" stroke="#7c5bff" stroke-width="2" data-page-node-id="XDH1LXDJMBci3uU1RmZz5q"/>
+        <!-- Q1: F=0.8571 R=0.9624 P=0.5696 Rc=1.0 C=0.9052 -->
+        <polygon points="340,75.0 474.7,156.1 459.9,267.0 258,195 297.1,166.8"
+          fill="none" stroke="#5b8cff" stroke-width="1.5" stroke-dasharray="4,3" data-page-node-id="uKLj0uh8YeHFmnM0qlNO9G"/>
+        <!-- Q2: F=1.0 R=0.9497 P=1.0 Rc=1.0 C=0.6758 -->
+        <polygon points="340,55 473.5,157.5 422,195 258,195 329.3,168.3"
+          fill="none" stroke="#36d6c4" stroke-width="1.5" stroke-dasharray="4,3" data-page-node-id="b8CBC3Wt9ZgRkAhkQax8ET"/>
+        <!-- Q3: F=0.4444 R=0.9577 P=1.0 Rc=1.0 C=0.9111 -->
+        <polygon points="340,132.8 474.4,156.3 422,195 258,195 286.4,167.5"
+          fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="4,3" data-page-node-id="DyIgftMeTFRj6Dv5o9Jf83"/>
+        <!-- Legend -->
+        <g font-size="11" font-family="-apple-system,sans-serif" data-page-node-id="KV7WL1dRxUM6IB9XDk36VT">
+          <rect x="500" y="60" width="14" height="3" fill="#7c5bff" data-page-node-id="TjMfiXHrOtNIICMbEwGeyz"/><text x="520" y="64" fill="#cfd8ff" data-page-node-id="ah6sduBIZDwZ0FlxbEhGIS">平均</text>
+          <rect x="500" y="80" width="14" height="3" fill="#5b8cff" data-page-node-id="Tiq42vy8o8T6zmNwvhdQJA"/><text x="520" y="84" fill="#cfd8ff" data-page-node-id="RXWrqwEe9M18TD6pkhiZbc">Q1 加热器附近</text>
+          <rect x="500" y="100" width="14" height="3" fill="#36d6c4" data-page-node-id="aDue461cnQsVyjiPUm5RQ7"/><text x="520" y="104" fill="#cfd8ff" data-page-node-id="Dy5P4B6pzjSYhNE4YiB3Yp">Q2 卡纸使用</text>
+          <rect x="500" y="120" width="14" height="3" fill="#fbbf24" data-page-node-id="IihLM24FhE8fYm9PzJSbkJ"/><text x="520" y="124" fill="#cfd8ff" data-page-node-id="2PoJXuCjfEVl4en9oPVe00">Q3 起搏器</text>
+        </g>
+        <!-- scale ticks -->
+        <g font-size="9" fill="#5a6886" data-page-node-id="lfWJ8mHzxLiJnNHcQh5Rzt">
+          <text x="340" y="172" text-anchor="middle" data-page-node-id="Sg1mQTDhFD9GIz1rNpoSmV">1.0</text>
+          <text x="376" y="195" text-anchor="middle" data-page-node-id="ly91kwJTqRK8v5JGGMDZdU">0.75</text>
+          <text x="340" y="220" text-anchor="middle" data-page-node-id="xp9cMnBUVBxgXyK9EVH7z3">0.5</text>
+          <text x="304" y="195" text-anchor="middle" data-page-node-id="PCBwPfIbymB1tDmY5owosI">0.25</text>
+          <text x="340" y="148" text-anchor="middle" data-page-node-id="PAd9KKn7HRU0zsZSyEHVDb">0</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Per-case bar chart -->
+    <div class="chart-wrap reveal" data-page-node-id="sPJuiVavFwCZSbwRMAMHkP">
+      <div class="chart-title" data-page-node-id="yGpQLRs2cJWFjAz78F5TJO">图 2 · 三案例 × 五指标 柱状对比</div>
+      <div class="chart-sub" data-page-node-id="kODaZ6bBW8a2SakB0RHtoX">Y 轴 0–1.0，每组 5 根</div>
+      <svg viewBox="0 0 680 360" style="width:100%;height:auto;max-height:420px" data-page-node-id="1HC4zLW41RXm3d5Jf4D4hR">
+        <!-- axes: y 40-340 (300px), x 60-640 -->
+        <g stroke="rgba(120,160,220,0.18)" data-page-node-id="adR01ue29GFYwMHDlat8eB">
+          <line x1="60" y1="40" x2="60" y2="340" data-page-node-id="WnpP9qIAdp51Y2nBGeAIY1"/>
+          <line x1="60" y1="340" x2="640" y2="340" data-page-node-id="nfmN1igpZxmApIFAhSnEYr"/>
+          <!-- gridlines -->
+          <line x1="60" y1="265" x2="640" y2="265" stroke-dasharray="2,3" data-page-node-id="057Ipd06Cv6Yu2sKOpODeh"/>
+          <line x1="60" y1="190" x2="640" y2="190" stroke-dasharray="2,3" data-page-node-id="oJ4uE09gWfNsFt0knJlF7x"/>
+          <line x1="60" y1="115" x2="640" y2="115" stroke-dasharray="2,3" data-page-node-id="WIf8BIZBeTIFrO8cWHGmPZ"/>
+          <line x1="60" y1="40" x2="640" y2="40" stroke-dasharray="2,3" data-page-node-id="kJWXlvZqSHxEpnUTeBqUkd"/>
+        </g>
+        <g font-size="10" fill="#5a6886" text-anchor="end" data-page-node-id="WniEc8LsHKheKZxvXCrTO4">
+          <text x="55" y="344" data-page-node-id="X0Zznib48OCFYc6TzRMq7U">0.0</text>
+          <text x="55" y="269" data-page-node-id="307mJR9oVstIDviEdoYsm4">0.25</text>
+          <text x="55" y="194" data-page-node-id="aRED9Qr2kmgUbV7J5NyXBp">0.50</text>
+          <text x="55" y="119" data-page-node-id="NgvBdO0EDFhEA4tO7GXISY">0.75</text>
+          <text x="55" y="44" data-page-node-id="ChVh62A8vjfCEC3SHZUbdf">1.00</text>
+        </g>
+        <!-- 3 groups, group width ~180, 5 bars each 28w gap 4, group centered at 175, 350, 525 -->
+        <!-- group1: F R P Rc C  scores 0.8571 0.9624 0.5696 1.0 0.9052 -->
+        <!-- bar height = score * 300, y = 340 - h, x = group1_x + i*32 -->
+        <g data-page-node-id="PI6HaQyvVdSCQRS30Ch7tS">
+          <!-- F -->
+          <rect x="84" y="83" width="28" height="257" fill="#5b8cff" rx="3" data-page-node-id="KDYsZBO7B4an7AEIY61hLz"/>
+          <text x="98" y="76" text-anchor="middle" font-size="10" fill="#cfd8ff" data-page-node-id="UBsV8wE5NcD5ozDBquhDNV">0.86</text>
+          <!-- R -->
+          <rect x="116" y="51" width="28" height="289" fill="#36d6c4" rx="3" data-page-node-id="cCw9ayfeWBzLd9YVmMMgLn"/>
+          <text x="130" y="44" text-anchor="middle" font-size="10" fill="#cfd8ff" data-page-node-id="6LJrYjmDpwGVFIvoN8kMOl">0.96</text>
+          <!-- P -->
+          <rect x="148" y="169" width="28" height="171" fill="#fbbf24" rx="3" data-page-node-id="bu0ur3MBceZJLZPxUO51dd"/>
+          <text x="162" y="162" text-anchor="middle" font-size="10" fill="#cfd8ff" data-page-node-id="hGknBasl6jB4AzuCjxHywr">0.57</text>
+          <!-- Rc -->
+          <rect x="180" y="40" width="28" height="300" fill="#4ade80" rx="3" data-page-node-id="i8hqXP1S9HdjN8TRV579wa"/>
+          <text x="194" y="33" text-anchor="middle" font-size="10" fill="#cfd8ff" data-page-node-id="wMe48oDJBU0GbeBWt8aw3c">1.00</text>
+          <!-- C -->
+          <rect x="212" y="68" width="28" height="272" fill="#7c5bff" rx="3" data-page-node-id="rVm2IGjIhT4gzTjBY5RB2O"/>
+          <text x="226" y="61" text-anchor="middle" font-size="10" fill="#cfd8ff" data-page-node-id="OZA6byPsCeFMu6GNHquccx">0.91</text>
+          <text x="162" y="358" text-anchor="middle" font-size="11" fill="#8694b8" data-page-node-id="KXOu2nEdZY3jTxYD07dZwN">Q1 加热器附近</text>
+        </g>
+        <!-- group2: 1.0 0.9497 1.0 1.0 0.6758 -->
+        <g data-page-node-id="WvnDVirOOrAFAWmRwyK16A">
+          <rect x="312" y="40" width="28" height="300" fill="#5b8cff" rx="3" data-page-node-id="jDscni7e6WfIk256xOj64C"/>
+          <text x="326" y="33" text-anchor="middle" font-size="10" fill="#cfd8ff" data-page-node-id="OmfM1CbdQHKXj679rkDmQ5">1.00</text>
+          <rect x="344" y="55" width="28" height="285" fill="#36d6c4" rx="3" data-page-node-id="k0CjQzJZZEdF7D7nhdyVw9"/>
+          <text x="358" y="48" text-anchor="middle" font-size="10" fill="#cfd8ff" data-page-node-id="Tl0E56lsAk7hcOZmzB0gvA">0.95</text>
+          <rect x="376" y="40" width="28" height="300" fill="#fbbf24" rx="3" data-page-node-id="LZtdhPxjxETuNaIVvqzw7N"/>
+          <text x="390" y="33" text-anchor="middle" font-size="10" fill="#cfd8ff" data-page-node-id="a9MwxFPSk3jDOTPxwRpBdd">1.00</text>
+          <rect x="408" y="40" width="28" height="300" fill="#4ade80" rx="3" data-page-node-id="2GOXXqUfWVCIWRZuBCwLg7"/>
+          <text x="422" y="33" text-anchor="middle" font-size="10" fill="#cfd8ff" data-page-node-id="0HwozAYWtpAlcFBJfBiqyX">1.00</text>
+          <rect x="440" y="137" width="28" height="203" fill="#7c5bff" rx="3" data-page-node-id="fllp7NNlzqkC5DrhuTKNC1"/>
+          <text x="454" y="130" text-anchor="middle" font-size="10" fill="#cfd8ff" data-page-node-id="v2yEj2ohYwWZkMgVDcgp61">0.68</text>
+          <text x="390" y="358" text-anchor="middle" font-size="11" fill="#8694b8" data-page-node-id="x3QBAvfnCjCURzljP0foSZ">Q2 卡纸使用</text>
+        </g>
+        <!-- group3: 0.4444 0.9577 1.0 1.0 0.9111 -->
+        <g data-page-node-id="HMcdnrSmITAQJQsDMT6jjl">
+          <rect x="540" y="207" width="28" height="133" fill="#5b8cff" rx="3" data-page-node-id="uMFo3gfzuAq2HkuCXz53PV"/>
+          <text x="554" y="200" text-anchor="middle" font-size="10" fill="#cfd8ff" data-page-node-id="HN60PV95BAajMTWzsVmAbi">0.44</text>
+          <rect x="572" y="53" width="28" height="287" fill="#36d6c4" rx="3" data-page-node-id="jdDG8Ow9yhrs2fPAvqzv3R"/>
+          <text x="586" y="46" text-anchor="middle" font-size="10" fill="#cfd8ff" data-page-node-id="Y86ZxzhYRu1m4xS1g8ToBp">0.96</text>
+          <rect x="604" y="40" width="28" height="300" fill="#fbbf24" rx="3" data-page-node-id="BAywQ5XXvItkkgg1ARRaE9"/>
+          <text x="618" y="33" text-anchor="middle" font-size="10" fill="#cfd8ff" data-page-node-id="XQwwGna22HDUsONqvKCwJ9">1.00</text>
+          <rect x="636" y="40" width="28" height="300" fill="#4ade80" rx="3" data-page-node-id="3GcKQp5PfmNdf54XHcp54j"/>
+          <text x="650" y="33" text-anchor="middle" font-size="10" fill="#cfd8ff" data-page-node-id="nnuFRZjdo7KSc5TdFq13f1">1.00</text>
+          <text x="618" y="358" text-anchor="middle" font-size="11" fill="#8694b8" data-page-node-id="CMFq2mYiBFrElajrsyCRZt">Q3 起搏器</text>
+        </g>
+        <!-- legend -->
+        <g font-size="10" fill="#8694b8" data-page-node-id="3r3Z3n2h6njjrVUakWw8sE">
+          <rect x="60" y="10" width="10" height="10" fill="#5b8cff" rx="2" data-page-node-id="jYCLBTHSHa61J77h5ZLvSg"/><text x="76" y="19" data-page-node-id="AQZcvRCsyw5U65VMohyF4x">Faithfulness</text>
+          <rect x="160" y="10" width="10" height="10" fill="#36d6c4" rx="2" data-page-node-id="2yDKIJP192ddSRMPvmeqle"/><text x="176" y="19" data-page-node-id="zq4agYr0qpm7mBvvSyrC7d">Rel.</text>
+          <rect x="230" y="10" width="10" height="10" fill="#fbbf24" rx="2" data-page-node-id="TFcAIQOjOxMc5veZ6olwYG"/><text x="246" y="19" data-page-node-id="eGQUhphifoiJHkI8ViyKxg">Precision</text>
+          <rect x="320" y="10" width="10" height="10" fill="#4ade80" rx="2" data-page-node-id="bdi2w4lE5B7XrHlZDc5xBj"/><text x="336" y="19" data-page-node-id="o5uzHfBGkmgAmFdVpDNkXL">Recall</text>
+          <rect x="395" y="10" width="10" height="10" fill="#7c5bff" rx="2" data-page-node-id="BoJdkEozv1JhA94OSPA8ji"/><text x="411" y="19" data-page-node-id="XFU72ui7F4cbVmBACHZJrO">Correctness</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Scatter -->
+    <div class="chart-wrap reveal" data-page-node-id="BiC3ad35717elbGP2ZCMJk">
+      <div class="chart-title" data-page-node-id="6H2qUjj1KuxWFVIkhaj1I7">图 3 · Faithfulness × Answer Correctness 散点</div>
+      <div class="chart-sub" data-page-node-id="wuxjxV5xNfd5MfDpnrTymr">理想象限：右上。Q3 起搏器左偏（忠实度低，正确性却高）</div>
+      <svg viewBox="0 0 680 360" style="width:100%;height:auto;max-height:380px" data-page-node-id="wVZQAk7nFJTPv1NMFrOMiv">
+        <defs data-page-node-id="xKFCXMjncXaCT9ztT7hpkk">
+          <linearGradient id="q-quad" x1="0%" y1="0%" x2="100%" y2="100%" data-page-node-id="7zEE0HaukF1avsGyAbZNHE">
+            <stop offset="0%" stop-color="#f87171" stop-opacity=".05" data-page-node-id="f4l8Q9tCXiV5tuPYcglIGL"/>
+            <stop offset="100%" stop-color="#4ade80" stop-opacity=".18" data-page-node-id="6uJ11xY0tyHHojoRMiEvpQ"/>
+          </linearGradient>
+        </defs>
+        <!-- plot area 60,40 to 640,320 -->
+        <rect x="60" y="40" width="580" height="280" fill="url(#q-quad)" opacity=".7" data-page-node-id="gjxA9zJ4iK6zmHDaC6DgBz"/>
+        <g stroke="rgba(120,160,220,0.18)" data-page-node-id="Na3ZkRtJRZLryYs5EarDdz">
+          <line x1="60" y1="40" x2="60" y2="320" data-page-node-id="pT4A8SXfy8mCJVgXtqvVVz"/>
+          <line x1="60" y1="320" x2="640" y2="320" data-page-node-id="apbt2V1nGpB8VAE40ExjQv"/>
+          <line x1="350" y1="40" x2="350" y2="320" stroke-dasharray="3,3" data-page-node-id="diCVJyDwwwATRWIRjcQ38e"/>
+          <line x1="60" y1="180" x2="640" y2="180" stroke-dasharray="3,3" data-page-node-id="gj6DaCCU4kYno5FEIyIwhO"/>
+        </g>
+        <g font-size="10" fill="#5a6886" data-page-node-id="gL2GdEF3CGCHFDhBIOfho8">
+          <text x="55" y="324" text-anchor="end" data-page-node-id="NNLaYiSm5U1sQ6bdgLJNFd">0.0</text>
+          <text x="55" y="184" text-anchor="end" data-page-node-id="1oVY2uy329BTQCNIpdFxOC">0.5</text>
+          <text x="55" y="44" text-anchor="end" data-page-node-id="zoC413HOAwM2qSmNwCzMbI">1.0</text>
+          <text x="60" y="338" text-anchor="middle" data-page-node-id="siFeGJ6qFB9owvg8WfFnrq">0.0</text>
+          <text x="350" y="338" text-anchor="middle" data-page-node-id="YQZHJG0JXqQpTcE0lcpG0I">0.5</text>
+          <text x="640" y="338" text-anchor="middle" data-page-node-id="kLjHAH8LxpUXyDNVzs92Pv">1.0</text>
+          <text x="55" y="20" fill="#8694b8" data-page-node-id="PmG3DoSMdE3SAG9IswQ42P">Faithfulness ↑</text>
+          <text x="640" y="338" text-anchor="end" fill="#8694b8" data-page-node-id="C0DIz6lGBA6BcLt0XApBmN">→ Answer Correctness</text>
+        </g>
+        <!-- scale: x 60..640 = 0..1.0 (580px), y 320..40 = 1..0 (280px inverted) -->
+        <!-- Q1: F=0.8571, C=0.9052 -> x=60+0.9052*580=585.0, y=320-0.8571*280=80.0 -->
+        <circle cx="585" cy="80" r="10" fill="#5b8cff" opacity=".85" data-page-node-id="7ODsCMtwl9NKBJnmfN4P7z"/>
+        <text x="600" y="78" font-size="11" fill="#cfd8ff" data-page-node-id="oC8e1dNqRDIlxDJqDYwsR1">Q1 (0.86, 0.91)</text>
+        <!-- Q2: F=1.0, C=0.6758 -> x=60+0.6758*580=452, y=40 -->
+        <circle cx="452" cy="40" r="10" fill="#36d6c4" opacity=".85" data-page-node-id="gx2hZAi7TLYixotRlJ9ahF"/>
+        <text x="467" y="38" font-size="11" fill="#cfd8ff" data-page-node-id="z0PvIAcKktJaRpCORm4y9s">Q2 (1.00, 0.68)</text>
+        <!-- Q3: F=0.4444, C=0.9111 -> x=60+0.9111*580=588.4, y=320-0.4444*280=195.6 -->
+        <circle cx="588" cy="196" r="10" fill="#fbbf24" opacity=".85" data-page-node-id="NSAYy83tluABAqbUf7x0tK"/>
+        <text x="525" y="215" font-size="11" fill="#cfd8ff" data-page-node-id="ngkQZWxrdULkdsewWbZOdj">Q3 (0.44, 0.91) ⚠</text>
+        <!-- Avg: F=0.7672, C=0.8307 -> x=60+0.8307*580=541.8, y=320-0.7672*280=105.2 -->
+        <circle cx="542" cy="105" r="7" fill="#7c5bff" opacity=".7" data-page-node-id="MNL0a4SxaFyDpYKFi7SYZr"/>
+        <text x="555" y="106" font-size="11" fill="#cfd8ff" data-page-node-id="Asdcq5SAbfX5Ol32sKVRfT">均值 (0.77, 0.83)</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 04 CASES -->
+<section id="cases" data-page-node-id="psqCKvPbL5JKxyWWNBg5xd">
+  <div class="wrap" data-page-node-id="LA1F8v4GS1JbxIePxQ4lDi">
+    <div class="sec-head reveal" data-page-node-id="nNcT8S7ptDBbEN2K5lchun">
+      <div class="sec-tag" data-page-node-id="RVNPy4DKUZfLidWJamDq6V">04 · PER-CASE</div>
+      <h2 data-page-node-id="6WCncYDuWubLLGAPmTHvmR">逐题数据明细</h2>
+      <p class="desc" data-page-node-id="FfDEVyiDqql7ZZXWt2tONB">三案例 ground-truth 与生成回答、检索命中与指标对照。</p>
+    </div>
+    <div class="chart-wrap reveal" data-page-node-id="CQVs38P9R88l7BxjhteTBw">
+      <table class="tbl" data-page-node-id="z2WdcV2UWJDJFZbHqoVPGD">
+        <thead data-page-node-id="90CGHJzHWCvEyoOi5NcgEL">
+          <tr data-page-node-id="6skZeJNiVSYL7c4YIeb6gH"><th style="width:28%" data-page-node-id="dlRRG4IIIMkrabuwkqgFub">题目</th><th data-page-node-id="IVywyBB6sNfBK62KfnDLxZ">F</th><th data-page-node-id="H5eZBJvNbBDi4LJxwDTL4K">Rel.</th><th data-page-node-id="FSFvMBNa5yj2EvENOWmJor">Prec.</th><th data-page-node-id="TiJF4fK8sH9A5w3Qii77TV">Rec.</th><th data-page-node-id="HQH1jcvGHV0x62VX9B6ZA8">Corr.</th><th data-page-node-id="mkkonXX4X6EawDa1mSPTOP">状态</th></tr>
+        </thead>
+        <tbody data-page-node-id="nvHquVkoR7Qcv7uUn69pF2">
+          <tr data-page-node-id="F2ap2KsHjvpF6BwxMpKw64">
+            <td data-page-node-id="qV1A5yyWTELkdi8XOXTVC7">Q1 加热器/空调/电风扇/水附近</td>
+            <td class="num" data-page-node-id="JQdoQr3Ml4zxF9CwebK3Hw"><span class="badge b-good" data-page-node-id="3NneHLOUMrpOgQEY3IsvgG">0.86</span></td>
+            <td class="num" data-page-node-id="MsgkIjX7GYADNox67pvGH9"><span class="badge b-good" data-page-node-id="bcrRnDv5c067DUIknWwYfR">0.96</span></td>
+            <td class="num" data-page-node-id="hpoMEMBGeSlY97n5LxNxSx"><span class="badge b-mid" data-page-node-id="mSkZncgMegOi0BGCDHcIcT">0.57</span></td>
+            <td class="num" data-page-node-id="7XfenKbboQhiXnEAJPGvxU"><span class="badge b-good" data-page-node-id="ot6xfkvoV8csFoBNph9xH3">1.00</span></td>
+            <td class="num" data-page-node-id="hbukwKmKgg4psmomrlUoT9"><span class="badge b-good" data-page-node-id="erlh886DXKLUt1LmiknCUq">0.91</span></td>
+            <td data-page-node-id="VDBzYV63AyqAlYs4USwrRW">Precision 偏低（混入通用电器安全 web 段）</td>
+          </tr>
+          <tr data-page-node-id="HGhvFWkCUNaIHwgblamaLp">
+            <td data-page-node-id="Lge6e0you6JHo9hLPfZJd3">Q2 卡纸/纸张散落继续使用</td>
+            <td class="num" data-page-node-id="KYHQQHNDHITABlz2459teH"><span class="badge b-good" data-page-node-id="CH6NCueQjvYQGzftR0aW2j">1.00</span></td>
+            <td class="num" data-page-node-id="81ou3pbKCSQt4HRQW8PEp7"><span class="badge b-good" data-page-node-id="7Z3Fb39Xj2yOe1QkuEVGm7">0.95</span></td>
+            <td class="num" data-page-node-id="OAguM6fMrcvy9OBzUku2Qp"><span class="badge b-good" data-page-node-id="Wypw62nVtsp5g8UuHnHsSP">1.00</span></td>
+            <td class="num" data-page-node-id="P3ROWPCPegtCOr2k3e9Egx"><span class="badge b-good" data-page-node-id="RJn6YFFSepVrDT1ejTVFib">1.00</span></td>
+            <td class="num" data-page-node-id="Tqpa8XJKD0lVE9MKqPrxL2"><span class="badge b-mid" data-page-node-id="YKoSjyaaU9GUxalihhL8TM">0.68</span></td>
+            <td data-page-node-id="1dWwikIEPnafUjWW3sGdEq">Correctness 偏低（ground-truth 过短，扩展回答被判偏）</td>
+          </tr>
+          <tr data-page-node-id="u431cv9w6Vh7f9rdZw320k">
+            <td data-page-node-id="xBCICSq0YCxh0DOCMC6g4i">Q3 起搏器用户靠近</td>
+            <td class="num" data-page-node-id="4GesX8Bf6M9eei2ABCkc6m"><span class="badge b-bad" data-page-node-id="dnpP1bnslR1DvSlyoRFt3F">0.44</span></td>
+            <td class="num" data-page-node-id="zKa5Ko7xc1JQHTXF0ETDvT"><span class="badge b-good" data-page-node-id="wVKVt1dcBCtXHOjZB6HJBI">0.96</span></td>
+            <td class="num" data-page-node-id="Ohr8Jts9WkJYNCtltQBgNB"><span class="badge b-good" data-page-node-id="AeaYRoDwNFqZYFyzAMBYQx">1.00</span></td>
+            <td class="num" data-page-node-id="suNOGqDOZ9UTuFMM02OliB"><span class="badge b-good" data-page-node-id="sdDzJNkYDb4A7FQ4XCeYc7">1.00</span></td>
+            <td class="num" data-page-node-id="vZHXECVHK5nVzqDmCE0EuC"><span class="badge b-good" data-page-node-id="rFTEjHvCGbTufVRE2HR3lq">0.91</span></td>
+            <td data-page-node-id="huqlQPWFStS4OkGFj6GwYo">Faithfulness 严重偏低（回答含额外发挥）</td>
+          </tr>
+          <tr style="background:rgba(91,140,255,.06)" data-page-node-id="vrh8dlVkubfT1LBm2OMtFF">
+            <td data-page-node-id="BaDrvE7qkfykzWWPQ05trj"><strong data-page-node-id="5UirLC1gDiDOmCIlpbbg23">平均</strong></td>
+            <td class="num" data-page-node-id="EhubVnZe4HdjhOgeSBlFh4"><span class="badge b-mid" data-page-node-id="rZx4ZKRiUrEkykDcge345q">0.77</span></td>
+            <td class="num" data-page-node-id="JjMujVmdq2ZEDWfibTpgVi"><span class="badge b-good" data-page-node-id="AAG1sAQHvDzmu46XuNgVeL">0.96</span></td>
+            <td class="num" data-page-node-id="iwNozQk9lptXUTDmXVZs9e"><span class="badge b-good" data-page-node-id="46tYugcFYgk6pjdGxhMBYW">0.86</span></td>
+            <td class="num" data-page-node-id="eh6U3f0mjX1XaerWZ30p8L"><span class="badge b-good" data-page-node-id="cxmIAeDD0fCjJB44NTCBnu">1.00</span></td>
+            <td class="num" data-page-node-id="lvel5owqY8AJckRt7T5S7l"><span class="badge b-good" data-page-node-id="VRSdGivVTOGv3GHduSYHi7">0.83</span></td>
+            <td data-page-node-id="rwSuyYSJqSFfDPddUjPB8Q">综合质量良好</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="g-3" data-page-node-id="aOIyYqClkHdVRFQIlvDjfp">
+      <div class="card reveal" data-page-node-id="wzuq2KHJZIGVJ4sNb4Cs1i">
+        <h3 data-page-node-id="r8Pe5UIcSAJs3TFUB8j8H9"><span class="ic" data-page-node-id="J1w47SUA7j5nP6TBMQFmCh">Q1</span>加热器/空调/风扇附近</h3>
+        <p style="margin-bottom:8px" data-page-node-id="PFFBFdKYnPaJaUsG6utBhc"><strong style="color:var(--text)" data-page-node-id="9o5ctVc7kGOqcuwWtNywf5">Ground-truth</strong></p>
+        <p style="background:rgba(74,222,128,.06);border-left:3px solid var(--green);padding:10px 12px;border-radius:0 8px 8px 0;font-size:13px;color:#c9efd4" data-page-node-id="zRJVPYZlu1DsVTIlzju3YD">这些设备可能产生热气流、冷凝水或湿气，导致本设备受热、受潮或产生冷凝，从而引发短路、触电或火灾风险。</p>
+        <p style="margin:12px 0 8px" data-page-node-id="HWcZXJM8gLE8YfXKA7Q3xB"><strong style="color:var(--text)" data-page-node-id="W7MPiNHmEYIRjfr733UVsx">生成回答摘要</strong></p>
+        <p style="font-size:13px" data-page-node-id="j8EYox6WLxMT68iDzp7MV1">展开为 4 大点（过热、冷凝水、湿气灰尘、安全环境），并附 2 张图。核心结论与 GT 一致，但更长的表述带来更低的 Precision（混入通用吹风机/电暖器 web 段）。</p>
+      </div>
+      <div class="card reveal" data-page-node-id="k9wD0IcHWfd1p4sQ9LRbQn">
+        <h3 data-page-node-id="5CIbeuvo92mGR8VzexTy5a"><span class="ic" data-page-node-id="UwfwCzABoPiFbSgFhuXH9G">Q2</span>卡纸时继续使用</h3>
+        <p style="margin-bottom:8px" data-page-node-id="EQstMDF8UroEfKopvi3vZ6"><strong style="color:var(--text)" data-page-node-id="GbYfql7GK3Pt5csHdUWkJH">Ground-truth</strong></p>
+        <p style="background:rgba(74,222,128,.06);border-left:3px solid var(--green);padding:10px 12px;border-radius:0 8px 8px 0;font-size:13px;color:#c9efd4" data-page-node-id="vwOX01mjCEE6CPlrlJwDzM">纸张与定影单元长时间接触可能导致火灾。</p>
+        <p style="margin:12px 0 8px" data-page-node-id="mvfOYLNSAWl5staYywCzn8"><strong style="color:var(--text)" data-page-node-id="WH25PxzInhRNINT3OvB6PN">生成回答摘要</strong></p>
+        <p style="font-size:13px" data-page-node-id="hOMz2Dj6FywHkFLHhpT6sz">回答简洁、紧扣定影单元高温，Faithfulness 满分 1.00。Correctness 偏低是因 ground-truth 仅 24 字，回答稍长被 Ragas 的 Answer Correctness（语义相似度 + 事实重叠）判为偏题。</p>
+      </div>
+      <div class="card reveal" data-page-node-id="Zb9qDmTVaVuDQOF2mpornE">
+        <h3 data-page-node-id="fNTDp5OOki5ZoQFE5y7r2X"><span class="ic" data-page-node-id="OuFL1XcNaEIS7ws2yxSKMJ">Q3</span>起搏器用户</h3>
+        <p style="margin-bottom:8px" data-page-node-id="vpS1ZjKYQAWBBj7tN2OfDH"><strong style="color:var(--text)" data-page-node-id="yzzL8Bq1R7zvXCXy01dPOu">Ground-truth</strong></p>
+        <p style="background:rgba(74,222,128,.06);border-left:3px solid var(--green);padding:10px 12px;border-radius:0 8px 8px 0;font-size:13px;color:#c9efd4" data-page-node-id="rNx56oeFHHnTu0FkvXiT3E">本设备可能产生弱磁场。起搏器用户若感觉异常应远离设备并立即就医。</p>
+        <p style="margin:12px 0 8px" data-page-node-id="1vDeG4DGgpCzX8Gui4bJ0D"><strong style="color:var(--text)" data-page-node-id="IAQwH3ZGxvbWwLBsfPYSZo">生成回答摘要</strong></p>
+        <p style="font-size:13px" data-page-node-id="bLbhX0kRHAPrLDtx5F2dxE">结论正确且引用了"弱磁场"原文。但加入"影响起搏器正常功能，进而危及健康"等推断表述，被 Ragas 判为脱离证据，Faithfulness 仅 0.44。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 PIPELINE -->
+<section id="pipeline" data-page-node-id="Q1X7pn8p6kg3C03VcNA3j4">
+  <div class="wrap" data-page-node-id="oICeIDGevDTNzIY0RNy7Oc">
+    <div class="sec-head reveal" data-page-node-id="HnrL2xTXy0o2mAfMaQQj5F">
+      <div class="sec-tag" data-page-node-id="jBAj9GEpPxm3epsiVULyeu">05 · RAG PIPELINE</div>
+      <h2 data-page-node-id="q7XK0bfLdag1jPL2aJgrgh">RAG 检索链路（单次执行快照）</h2>
+      <p class="desc" data-page-node-id="ng0nRUr1rLSJdPw7dRscDE">基于 Case 1 的执行日志：5 个 LangGraph 节点 + Milvus 混合检索 + BGE-M3 + DashScope 200 OK。</p>
+    </div>
+    <div class="chart-wrap reveal" style="overflow-x:auto" data-page-node-id="8p0FFfDXUbYfqOryT76W2N">
+      <svg viewBox="0 0 1140 240" style="width:100%;min-width:900px;height:auto;max-height:260px" data-page-node-id="K4cz4xuLonOb33EkywFhH4">
+        <defs data-page-node-id="rbGxF4vG6V6kFzKt6WfEBY">
+          <linearGradient id="g-node" x1="0%" y1="0%" x2="0%" y2="100%" data-page-node-id="B7PUnddwZsa8oI0gfmrB8h">
+            <stop offset="0%" stop-color="#1a2140" data-page-node-id="uFjp5TgCZHO8W7AhDjjoJj"/>
+            <stop offset="100%" stop-color="#141a2e" data-page-node-id="1rWHddXdeOI4IRFMRrJHkO"/>
+          </linearGradient>
+        </defs>
+        <!-- 6 nodes horizontally -->
+        <g font-family="-apple-system,sans-serif" data-page-node-id="DE3aBiR8vRLTpUxYSARgkP">
+          <!-- 1 item_name_confirm -->
+          <rect x="20" y="60" width="170" height="100" rx="12" fill="url(#g-node)" stroke="#5b8cff" data-page-node-id="rmqgCVHNjcGECqrPpNqusu"/>
+          <text x="105" y="85" text-anchor="middle" font-size="11" fill="#8694b8" data-page-node-id="hUHG13lbbiaygqw644tDXY">节点 1</text>
+          <text x="105" y="105" text-anchor="middle" font-size="13" fill="#e6ecff" font-weight="700" data-page-node-id="PVUHLBz6D2tp4aChCfGHTs">item_name_confirm</text>
+          <text x="105" y="125" text-anchor="middle" font-size="10" fill="#8694b8" data-page-node-id="zEMBooJJKtTekHTxNrwKRN">提取 → 实体对齐</text>
+          <text x="105" y="143" text-anchor="middle" font-size="10" fill="#4ade80" data-page-node-id="rDonIuJKNircpJ0I39oqPb">命中 HAK180 烫金机 0.896</text>
+          <!-- arrow -->
+          <line x1="190" y1="110" x2="215" y2="110" stroke="#5b8cff" stroke-width="2" data-page-node-id="xSrXRhnaW2fCFG8NsH4lkf"/>
+          <polygon points="215,105 225,110 215,115" fill="#5b8cff" data-page-node-id="Exz7gHMa2RCzqNINOskMhJ"/>
+          <!-- 2 search_embedding_hyde -->
+          <rect x="225" y="60" width="180" height="100" rx="12" fill="url(#g-node)" stroke="#7c5bff" data-page-node-id="bWnxz3xnJsQOc0FA5GYakA"/>
+          <text x="315" y="85" text-anchor="middle" font-size="11" fill="#8694b8" data-page-node-id="doPlxk28PrCg0gEHeNzFbP">节点 2</text>
+          <text x="315" y="105" text-anchor="middle" font-size="13" fill="#e6ecff" font-weight="700" data-page-node-id="AKKqvng4AGzv8nvMwbDL0w">search_embedding_hyde</text>
+          <text x="315" y="125" text-anchor="middle" font-size="10" fill="#8694b8" data-page-node-id="DoXMr2nsPEmbODpOEAmsuY">生成假设性文档</text>
+          <text x="315" y="143" text-anchor="middle" font-size="10" fill="#8694b8" data-page-node-id="CgSBq4DlERyEhxHKsyFy4x">query 改写增强</text>
+          <line x1="405" y1="110" x2="430" y2="110" stroke="#5b8cff" stroke-width="2" data-page-node-id="dtPz4HaAdHQReygNsOaO6o"/>
+          <polygon points="430,105 440,110 430,115" fill="#5b8cff" data-page-node-id="STAIRcGiDrTRX0iySp2v0w"/>
+          <!-- 3 web_search_mcp -->
+          <rect x="440" y="60" width="180" height="100" rx="12" fill="url(#g-node)" stroke="#36d6c4" data-page-node-id="SUND0PLhd6n8yLflHBLuWV"/>
+          <text x="530" y="85" text-anchor="middle" font-size="11" fill="#8694b8" data-page-node-id="PiiYEvM4yqAd5fUQRIjCFH">节点 3</text>
+          <text x="530" y="105" text-anchor="middle" font-size="13" fill="#e6ecff" font-weight="700" data-page-node-id="ahkzkNMpqVoH3kHO6UD0b1">web_search_mcp</text>
+          <text x="530" y="125" text-anchor="middle" font-size="10" fill="#8694b8" data-page-node-id="HiR9rGYpYH5Vua3I9FzkTX">百炼 WebSearch MCP</text>
+          <text x="530" y="143" text-anchor="middle" font-size="10" fill="#4ade80" data-page-node-id="rLg1vRocBbHFXYauPTdTam">streamable HTTP 200 OK</text>
+          <line x1="620" y1="110" x2="645" y2="110" stroke="#5b8cff" stroke-width="2" data-page-node-id="BGkC1BDag3X4t938EabIvW"/>
+          <polygon points="645,105 655,110 645,115" fill="#5b8cff" data-page-node-id="CDFQKvAgSRGMNM4hzyQ0g5"/>
+          <!-- 4 milvus hybrid -->
+          <rect x="655" y="60" width="200" height="100" rx="12" fill="url(#g-node)" stroke="#fbbf24" data-page-node-id="UqnzhQPVr3Pjfn7jCfcKEs"/>
+          <text x="755" y="85" text-anchor="middle" font-size="11" fill="#8694b8" data-page-node-id="ad65xJUk6Cbu22ljs64gcM">节点 4</text>
+          <text x="755" y="105" text-anchor="middle" font-size="13" fill="#e6ecff" font-weight="700" data-page-node-id="EsqeziQct4vSJ1mXO1AqAE">milvus 混合检索</text>
+          <text x="755" y="125" text-anchor="middle" font-size="10" fill="#8694b8" data-page-node-id="3Ir2BuXNEjSo6BBBMiB548">dense + sparse (BGE-M3)</text>
+          <text x="755" y="143" text-anchor="middle" font-size="10" fill="#4ade80" data-page-node-id="CkvvCBmMAXre0CfLA6jjLM">kb_chunks 命中 5 条</text>
+          <line x1="855" y1="110" x2="880" y2="110" stroke="#5b8cff" stroke-width="2" data-page-node-id="tsgpEk5yBvwH1NNh6XQrG8"/>
+          <polygon points="880,105 890,110 880,115" fill="#5b8cff" data-page-node-id="Cq3c6rJYrr3Na1Bn2oPJrB"/>
+          <!-- 5 rerank -->
+          <rect x="890" y="60" width="120" height="100" rx="12" fill="url(#g-node)" stroke="#f472b6" data-page-node-id="p50daCuUj8OiPKrVH3tGwx"/>
+          <text x="950" y="85" text-anchor="middle" font-size="11" fill="#8694b8" data-page-node-id="sXTPS0uoKrS8zh7CjBvo4M">节点 5</text>
+          <text x="950" y="105" text-anchor="middle" font-size="13" fill="#e6ecff" font-weight="700" data-page-node-id="HYZQDChIDUVw9ejWDf7OF0">rerank</text>
+          <text x="950" y="125" text-anchor="middle" font-size="10" fill="#8694b8" data-page-node-id="zDlrhTUbWHmKdMhuYiFKEh">qwen3-rerank</text>
+          <text x="950" y="143" text-anchor="middle" font-size="10" fill="#4ade80" data-page-node-id="fP5IkROCsYy7TsSDbDeBxa">top-N 重排</text>
+          <line x1="1010" y1="110" x2="1035" y2="110" stroke="#5b8cff" stroke-width="2" data-page-node-id="7PJGNIGSVDo1XT8tEDwoDd"/>
+          <polygon points="1035,105 1045,110 1035,115" fill="#5b8cff" data-page-node-id="fx8DEKhnhWyWFuvzR4Txo6"/>
+          <!-- 6 answer_output -->
+          <rect x="1045" y="60" width="80" height="100" rx="12" fill="url(#g-node)" stroke="#c45bff" data-page-node-id="yP1HqFj5nDy1iG9CpLtQYX"/>
+          <text x="1085" y="85" text-anchor="middle" font-size="11" fill="#8694b8" data-page-node-id="fD7Oxdk9JEf2IQIeMl5FL9">节点 6</text>
+          <text x="1085" y="105" text-anchor="middle" font-size="13" fill="#e6ecff" font-weight="700" data-page-node-id="DpdFT23U0F9A2VX3XgAkIe">LLM</text>
+          <text x="1085" y="125" text-anchor="middle" font-size="10" fill="#8694b8" data-page-node-id="TkeVI8xWB5LlMBappTR8hP">生成回答</text>
+          <text x="1085" y="143" text-anchor="middle" font-size="10" fill="#4ade80" data-page-node-id="71OtNIlE4aJ2IbEs7Y2GCO">163 字</text>
+        </g>
+        <!-- timeline -->
+        <line x1="20" y1="195" x2="1125" y2="195" stroke="rgba(120,160,220,0.25)" data-page-node-id="ZTOpIUTuvj6D82sC2klt5B"/>
+        <g font-size="10" fill="#8694b8" data-page-node-id="naBg7DsQ1UYOGH1wrFOLb4">
+          <text x="20" y="215" data-page-node-id="HwysbApSTQszXELBzlS7hm">20:36:38</text>
+          <text x="240" y="215" data-page-node-id="55LcHiuVhtZPZoybVvMEWO">20:36:44</text>
+          <text x="450" y="215" data-page-node-id="aAhPCYu6BBMQ9vAkRXhNZW">20:36:44</text>
+          <text x="670" y="215" data-page-node-id="mybXaMA9GunFrD66q4GJaV">20:36:44</text>
+          <text x="900" y="215" data-page-node-id="RJXkVZGuUqMRh5nHHEhfY5">20:36:59</text>
+          <text x="1050" y="215" data-page-node-id="a99eCzGrC8ZHShSJrJb725">20:37:01</text>
+          <text x="1125" y="215" text-anchor="end" fill="#4ade80" data-page-node-id="Mfhes3Wmx0AI9iVO43rACf">总耗时 ~23s</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="g-2" data-page-node-id="zFGAK9Ai3ZGuKl6x6aRoLz">
+      <div class="card reveal" data-page-node-id="Sh308jhnMxYdtZEJoN0IzF">
+        <h3 data-page-node-id="DKZtHcRZiEHLhPo4X2BdOD"><span class="ic" data-page-node-id="BAeTXrArkyB2VTZGeS8ykw">召</span>检索环节表现</h3>
+        <p style="margin-top:10px" data-page-node-id="ypiEwRGxg4tkK0EGazKAPw"><strong data-page-node-id="TM54udgq9b3o0L5ICCzD7H">kb_item_names</strong>：HAK180 烫金机 命中 0.8963（同列还有 H3CLA2608 网关 0.5672，正确高置信）。</p>
+        <p style="margin-top:8px" data-page-node-id="zdX053BtJbOMTV0LuDmmE1"><strong data-page-node-id="fnnKJM1qSnNA2NcWSkpi6A">kb_chunks</strong>：5 条命中（local 安全手册 × 3 + web 段 × 2），全部带 item_name 过滤 <code data-page-node-id="GubuGranJdMbEJkMMXGOxQ">item_name in ['HAK180烫金机']</code>。</p>
+      </div>
+      <div class="card reveal" data-page-node-id="xQvMLdRX65yK3pnLUFGQGQ">
+        <h3 data-page-node-id="C4HWIHQaiRY9w7IHMqTVib"><span class="ic" data-page-node-id="u5FKmCurtsWKzsaS3IWeFH">外</span>外部调用清单</h3>
+        <p style="margin-top:10px" data-page-node-id="vw7FMMLNBAB7Gxy20hdHZJ">• LLM（DashScope 兼容模式）≈ 1 次（生成回答）</p>
+        <p data-page-node-id="AtseI8x1q7TsCqYafjsVoh">• WebSearch MCP（streamable HTTP）= 3 次握手</p>
+        <p data-page-node-id="qIknW0d1duBWOkv89A2TKI">• Ragas 评估：5 指标 × 3 样本 = 15 次单元评估 ≈ 30+ 次 LLM 调用</p>
+        <p style="margin-top:6px;color:var(--green)" data-page-node-id="75l1ARcxGLwbM11GvrbvRN">全链路 HTTP 200，无超时/失败</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 QA DETAIL -->
+<section id="qa" data-page-node-id="Fjj8c0b0K1jr5nI4kGJkBz">
+  <div class="wrap" data-page-node-id="8RuAqXfrvYHh92WHZyLB4U">
+    <div class="sec-head reveal" data-page-node-id="O277Ua4SS2mU5UHA4lKyge">
+      <div class="sec-tag" data-page-node-id="LY9zTXxLEdAoQGuRXqkvG6">06 · DETAIL</div>
+      <h2 data-page-node-id="nqANEIFYP5qPHV6EaQxpIU">问答详情（可展开）</h2>
+      <p class="desc" data-page-node-id="OF5nazxh68ibWXmMSTVxck">对照 ground-truth 与生成回答，逐条阅读。</p>
+    </div>
+    <div class="qa reveal" data-page-node-id="4H24OkhWwFhnU9vDClRDnB">
+      <div class="qa-item" data-page-node-id="ODJS7BHhGpOjh6gwXXrNf6">
+        <div class="qa-q" data-page-node-id="58rQfe0FsILZBIyDdAszYo"><div class="tag" data-page-node-id="GoVtzh3JhmiBPxvvxjvcAx">Q1</div><div class="qtxt" data-page-node-id="7PCpdgkIlLU7WHGvkcy3Js">hak 180 烫金机：为什么不建议把设备放在加热器、空调、电风扇或水附近？</div><div class="chev" data-page-node-id="VlCZ0rkQze4hnhX9M8CCar">▾</div></div>
+        <div class="qa-a" data-page-node-id="G7iG6Xn89qxxCiIVoxD73y">
+          <p style="margin-top:14px" data-page-node-id="YAC3HyBuAVp14oY6H3tBNb"><strong style="color:var(--text)" data-page-node-id="pFEn353oRCr771exBm1v3j">Ground-truth</strong></p>
+          <div class="gt" data-page-node-id="bOASiMDa3bslFUuWpzSct0">因为这些设备可能产生热气流、冷凝水或湿气，导致本设备受热、受潮或产生冷凝，从而引发短路、触电或火灾风险。</div>
+          <p style="margin-top:14px" data-page-node-id="141AdWcwbjfeFt1Go7iJ4P"><strong style="color:var(--text)" data-page-node-id="bLHVmxIfHTqFGDYZ96ayq5">生成回答（摘要）</strong></p>
+          <div class="gen" data-page-node-id="a8g0TZlQLdaySBpa1EneNR">1) 避免过热和高温影响；2) 防止冷凝水或液体接触；3) 避免湿气和灰尘侵入；4) 确保设备安全运行环境（10°C–32°C / 20%–80% RH / 无冷凝）。核心结论与 GT 一致。</div>
+          <div class="metrics" data-page-node-id="cwGhVCiXHHz54MLK9ozcKo">
+            <div class="m" data-page-node-id="OpMYxQKDS10EgOJLAfiJNw"><strong data-page-node-id="u8dzAiV2Cj7DPCc880oYNc">Faithfulness</strong> 0.86</div>
+            <div class="m" data-page-node-id="BD9n3tui79bAYGVdhUMTtM"><strong data-page-node-id="To4ChhUHgQchfDQi44MnMO">Rel.</strong> 0.96</div>
+            <div class="m" data-page-node-id="DqxRyPOHm0ZytYNkL3eBXA"><strong data-page-node-id="fB4ByGADzB8nlRiHEVPE80">Precision</strong> 0.57</div>
+            <div class="m" data-page-node-id="mOZtPwF5NIrRhhW494gE3k"><strong data-page-node-id="8oAuQV7CzYgGa687eacAMH">Recall</strong> 1.00</div>
+            <div class="m" data-page-node-id="38aLuBBgmQnZei5C4CvQ3A"><strong data-page-node-id="AUMXmvhWxHQfrnkBroo4Yk">Correctness</strong> 0.91</div>
+          </div>
+        </div>
+      </div>
+      <div class="qa-item" data-page-node-id="6aLqhdHuctGQhOPN4jSHAe">
+        <div class="qa-q" data-page-node-id="WzNoXHMZgUaylhLecnF3fa"><div class="tag" data-page-node-id="8WylxRLpT7I6HZ88TUE946">Q2</div><div class="qtxt" data-page-node-id="PRUCIDn30VTyAJLbDbLNx2">hak 180 烫金机：为什么不要在卡纸或设备内部有纸张散落时继续使用？</div><div class="chev" data-page-node-id="JWg2sjZh0NdWvsJtTuNi5T">▾</div></div>
+        <div class="qa-a" data-page-node-id="v98Mj7E4CS6sDzYLkAZvtW">
+          <p style="margin-top:14px" data-page-node-id="S0seQ0sNKOFKhI2dB3nQVq"><strong style="color:var(--text)" data-page-node-id="HE8urAeFPOHxsbHceJAfbj">Ground-truth</strong></p>
+          <div class="gt" data-page-node-id="1mRbDUX2Grlgf5pcM53MUz">纸张与定影单元长时间接触可能导致火灾。</div>
+          <p style="margin-top:14px" data-page-node-id="V9cg1JOzIuJLctRXr00SvM"><strong style="color:var(--text)" data-page-node-id="Mhj6tVprC32clcivASWl8j">生成回答（摘要）</strong></p>
+          <div class="gen" data-page-node-id="t48zBf9eLzQFPBJSxm2E3p">纸张与定影单元长时间接触，可能因持续受热引发燃烧，从而造成火灾风险。回答紧扣"定影单元高温"机制，Faithfulness 满分。</div>
+          <div class="metrics" data-page-node-id="dbVnKYnA4okbhBQsEZT91N">
+            <div class="m" data-page-node-id="AIu9D97KEbVJVjDrkWXs8b"><strong data-page-node-id="MAxYy4Ki4ZIIJCmaelaYoA">Faithfulness</strong> 1.00</div>
+            <div class="m" data-page-node-id="zNMMk1qZGnbeGCm9EOncNZ"><strong data-page-node-id="4cno7PtgBp0Zs5eMZkkLYJ">Rel.</strong> 0.95</div>
+            <div class="m" data-page-node-id="Xzp06xlfsWBg1ion7FRwvT"><strong data-page-node-id="J2wM47n05k0CcwZk5aFdK2">Precision</strong> 1.00</div>
+            <div class="m" data-page-node-id="aAARyMNelaDQ2FDsuR2DYi"><strong data-page-node-id="kHu4LiTjSCsQp7LxcY3yZo">Recall</strong> 1.00</div>
+            <div class="m" data-page-node-id="3Ih2DMzbKEJ3O2991MuRQh"><strong data-page-node-id="3eJ1Bcu0iz80fTIwrEkCGt">Correctness</strong> 0.68</div>
+          </div>
+        </div>
+      </div>
+      <div class="qa-item" data-page-node-id="2ENKHCE2655FDPXn0clUX2">
+        <div class="qa-q" data-page-node-id="WSLq7GPEn9QjecY5GDcxfW"><div class="tag" data-page-node-id="n5Y7BVMCuDTpPMevbZwban">Q3</div><div class="qtxt" data-page-node-id="i9qJNQ9zZuIWpMUOCHz1zw">hak 180 烫金机：起搏器用户靠近 HAK180 感到异常时怎么办？为什么需要这样做？</div><div class="chev" data-page-node-id="EwJ2ODOMSOJx6qq6kngnyT">▾</div></div>
+        <div class="qa-a" data-page-node-id="HSfYojbVgnMU1B8BddSp4v">
+          <p style="margin-top:14px" data-page-node-id="1hHzpM9Uin5uR0aJd1iWIA"><strong style="color:var(--text)" data-page-node-id="QLX98gXBAZRlHb8bY8H5Wy">Ground-truth</strong></p>
+          <div class="gt" data-page-node-id="kMMQl8F7WGa8foTwKz7tFh">本设备可能会产生弱磁场。使用起搏器的用户如果在设备附近感觉到起搏器工作不正常，应远离本设备，并立即咨询医生。</div>
+          <p style="margin-top:14px" data-page-node-id="i8ncSG7kDhLvbFeEQCZCWV"><strong style="color:var(--text)" data-page-node-id="haFU4BkkJglUaMyBnay97F">生成回答（摘要）</strong></p>
+          <div class="gen" data-page-node-id="AK8JiWbcsu156OqE2rnsRe">应立即远离设备并尽快咨询医生。原文中只说明"设备可能产生弱磁场"，回答额外发挥"干扰可能影响起搏器功能进而危及健康"，被判为脱离证据 → Faithfulness 仅 0.44。</div>
+          <div class="metrics" data-page-node-id="AhAHflzfnTSWTX2ktjKxOl">
+            <div class="m" data-page-node-id="trbFuZCMmPVxh9XTKxkJz1"><strong data-page-node-id="AHgJ9kAnmf0u198NrIT5a0">Faithfulness</strong> 0.44 ⚠</div>
+            <div class="m" data-page-node-id="cIWZjI025akuW0QHlgLP70"><strong data-page-node-id="HDOTFcFcF1g8mDE4JBSzjw">Rel.</strong> 0.96</div>
+            <div class="m" data-page-node-id="335StRj0miM3VHgWnQLyZj"><strong data-page-node-id="RlKDyrC38P2XiOuiElQrH3">Precision</strong> 1.00</div>
+            <div class="m" data-page-node-id="w5woDmC3xAX6IhZUHawUFQ"><strong data-page-node-id="6pSAvK9zANa7KUow9f0Ksr">Recall</strong> 1.00</div>
+            <div class="m" data-page-node-id="IbC7CtC9lNsxm9BnETHFar"><strong data-page-node-id="t6JMoAj4NNkeE53Dvbj3Je">Correctness</strong> 0.91</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 07 CONCLUSION -->
+<section id="conclusion">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-tag">07 · CONCLUSION</div>
+      <h2>结论与优化建议</h2>
+      <p class="desc">基于本次 3 条样本的评估快照，给出可落地的下一步行动项。</p>
+    </div>
+    <div class="g-2 reveal">
+      <div class="card">
+        <h3><span class="ic">✓</span>已达成的目标</h3>
+        <p>• Context Recall = <strong style="color:var(--green)">1.00</strong>：混合检索 + rerank 链路可稳定召回所有 ground-truth 证据。</p>
+        <p>• Answer Relevancy = <strong style="color:var(--green)">0.96</strong>：回答与问题相关性强，无跑题现象。</p>
+        <p>• 端到端链路稳定：HTTP 全 200，无超时 / 鉴权失败。</p>
+      </div>
+      <div class="card">
+        <h3><span class="ic">!</span>需改进项</h3>
+        <p>• <strong style="color:var(--amber)">Faithfulness 0.77</strong>：尤其 Q3 起搏器 0.44，需收紧 prompt，禁止在回答中超出 context 推断。</p>
+        <p>• <strong style="color:var(--amber)">Context Precision 0.86</strong>：Q1 检索混入通用电器安全 web 段，建议提高 item_name 过滤 + 提高 rerank 阈值。</p>
+        <p>• <strong style="color:var(--amber)">Answer Correctness 0.83</strong>：Q2 因回答过长被误判，可优化 ground-truth 颗粒度或加入长度约束。</p>
+      </div>
+    </div>
+
+    <div class="chart-wrap reveal" style="margin-top:24px">
+      <div class="chart-title">下一步行动清单</div>
+      <table class="tbl">
+        <thead><tr><th>优先级</th><th>行动项</th><th>预期影响</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge b-bad">P0</span></td><td>在 answer_output 节点 prompt 中显式声明「仅基于检索 context 回答，不要补充医学/安全推断」</td><td>Faithfulness ↑（修复 Q3）</td></tr>
+          <tr><td><span class="badge b-bad">P0</span></td><td>将 Milvus 检索的 item_name 过滤从单一 IN 扩展为「IN + score > 阈值」组合，避免低相关 web 段进入 context</td><td>Context Precision ↑（修复 Q1）</td></tr>
+          <tr><td><span class="badge b-mid">P1</span></td><td>ground-truth 与回答长度对齐：扩写 gt 为完整句子（含「弱磁场」「远离设备」「咨询医生」三要素）</td><td>Correctness ↑</td></tr>
+          <tr><td><span class="badge b-mid">P1</span></td><td>扩大测试集至 ≥ 20 条，覆盖更多机型（HAK180 / H3CLA2608 / 通用手册）和更多问题类型</td><td>评估置信度 ↑</td></tr>
+          <tr><td><span class="badge b-good">P2</span></td><td>将 Faithfulness / Correctness 写入 CI 阈值（如 < 0.7 阻断），形成回归保护</td><td>长期质量可观测</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ 回到顶部</div>
+    <p>BOSS 智库 · RAG 评估可视化报告 · 基于 eval/qa.csv (3 条) + Ragas 五项指标</p>
+    <p style="margin-top:6px">评估时间 2026-09-07 20:36–20:39 · LLM DashScope qwen-plus · Embedding BGE-M3</p>
+  </div>
+</footer>
+
+<script>
+// QA 展开
+document.querySelectorAll('.qa-q').forEach(function(el){
+  el.addEventListener('click', function(){
+    var item = el.parentElement;
+    var ans = item.querySelector('.qa-a');
+    item.classList.toggle('open');
+    if(item.classList.contains('open')){ ans.classList.add('show'); }
+    else { ans.classList.remove('show'); }
+  });
+});
+
+// reveal
+var io = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      e.target.classList.add('in');
+      io.unobserve(e.target);
+    }
+  });
+},{threshold:0.12});
+document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+// KPI count-up
+function countUp(el){
+  var target = parseFloat(el.getAttribute('data-count'));
+  var dur = 1200;
+  var start = performance.now();
+  function step(t){
+    var p = Math.min((t - start) / dur, 1);
+    var ease = 1 - Math.pow(1 - p, 3);
+    var v = target * ease;
+    el.textContent = v.toFixed(4);
+    if(p < 1) requestAnimationFrame(step);
+    else el.textContent = target.toFixed(4);
+  }
+  requestAnimationFrame(step);
+}
+var kpiIo = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      countUp(e.target);
+      // animate bar
+      var bar = e.target.parentElement.querySelector('.kpi-bar i');
+      if(bar){
+        var w = bar.getAttribute('data-w');
+        setTimeout(function(){ bar.style.width = w; }, 80);
+      }
+      kpiIo.unobserve(e.target);
+    }
+  });
+},{threshold:0.3});
+document.querySelectorAll('.kpi-val').forEach(function(el){ kpiIo.observe(el); });
+
+// nav active
+var navLinks = document.querySelectorAll('.nav a');
+var sectionIds = Array.from(navLinks).map(function(a){ return a.getAttribute('href').slice(1); });
+window.addEventListener('scroll', function(){
+  var y = window.scrollY + 120;
+  var active = sectionIds[0];
+  sectionIds.forEach(function(id){
+    var sec = document.getElementById(id);
+    if(sec && sec.offsetTop <= y) active = id;
+  });
+  navLinks.forEach(function(a){
+    a.classList.toggle('active', a.getAttribute('href') === '#' + active);
+  });
+});
+</script>
+</body>
+</html>
