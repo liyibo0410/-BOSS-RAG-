@@ -66,14 +66,14 @@ async def query(background_tasks: BackgroundTasks, request: QueryRequest):
     # 当前会话id作为key! 整体装填处于运行中！
     update_task_status(session_id, TASK_STATUS_PROCESSING,is_stream)
 
-    print("开始处理流程... 是否流式:", is_stream, f"其他参数:{user_query}, session_id:{session_id}")
+    logger.debug(f"开始处理流程... 是否流式: {is_stream}, 其他参数: {user_query}, session_id: {session_id}")
 
     if is_stream:
         # 如果是流式，则返回一个流式响应，过程不断地推送
         # 运行执行图对象方法
         background_tasks.add_task(run_query_graph, session_id, user_query, is_stream)
         # 返回结果
-        print("开始处理结果....")
+        logger.debug("开始处理结果....")
         return {
             "message":"结果正在处理中...",
             "session_id":session_id
@@ -82,16 +82,18 @@ async def query(background_tasks: BackgroundTasks, request: QueryRequest):
         # 同步运行
         run_query_graph(session_id, user_query, is_stream)
         answer = get_task_result(session_id,"answer","")
+        sources = get_task_result(session_id,"sources",[])
         return {
             "message":"处理完成！",
             "session_id":session_id,
             "answer":answer,
+            "sources":sources,
             "done_list":[]
         }
 
 # 定义查询接口
 def run_query_graph(session_id: str, user_query: str, is_stream: bool = True):
-    print(f"开始流程图处理...{session_id} {user_query} {is_stream}")
+    logger.debug(f"开始流程图处理... {session_id} {user_query} {is_stream}")
 
     init_state = {
         "original_query": user_query,
@@ -105,7 +107,7 @@ def run_query_graph(session_id: str, user_query: str, is_stream: bool = True):
             logger.debug(chunk)
         update_task_status(session_id, TASK_STATUS_COMPLETED, is_stream)
     except Exception as e:
-        print(f"流程执行异常: {e}")
+        logger.error(f"流程执行异常: {e}", exc_info=True)
         update_task_status(session_id, TASK_STATUS_FAILED, is_stream)
         if is_stream:
             push_to_session(session_id, SSEEvent.ERROR, {"error": str(e)})
@@ -115,7 +117,7 @@ def run_query_graph(session_id: str, user_query: str, is_stream: bool = True):
 @router.get("/stream/{session_id}")
 async def stream(session_id: str, request: Request):
 
-    print("调用流式/stream...")
+    logger.debug("调用流式/stream...")
     """
     sse 实时返回结果
     """
@@ -158,6 +160,26 @@ async def history(session_id: str, limit: int = 50):
         return {"session_id": session_id, "items": items}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"history error: {e}")
+
+
+class FeedbackRequest(BaseModel):
+    """反馈请求数据结构"""
+    session_id: str = Field(..., description="会话ID")
+    message_id: str = Field(..., description="消息ID")
+    feedback: str = Field(..., description="反馈类型: up/down")
+    comment: str = Field("", description="反馈备注")
+
+@router.post("/feedback")
+async def submit_feedback(request: FeedbackRequest):
+    """提交用户对回答的反馈（👍👎）"""
+    from utils.mongo_history_utils import save_feedback
+    result = save_feedback(
+        session_id=request.session_id,
+        message_id=request.message_id,
+        feedback=request.feedback,
+        comment=request.comment
+    )
+    return {"message": "反馈已记录", "success": result}
 
 
 # 证明服务器启动即可

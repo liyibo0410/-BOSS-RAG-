@@ -1,4 +1,5 @@
 # processor/import_processor/nodes/node_entry.py
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -46,7 +47,22 @@ class NodeEntry(BaseNode):
         #4. 获取文件名作为标题
         state["file_title"] = import_file_path_obj.stem
 
+        # 5. 计算文件 hash（用于增量更新判断）
+        state["file_hash"] = self._compute_file_hash(import_file_path_obj)
+
+        # 6. 设置文档 owner（默认 "public"，可从上传参数注入）
+        state.setdefault("owner", state.get("owner", "public"))
+
         return state
+
+    @staticmethod
+    def _compute_file_hash(file_path: Path) -> str:
+        """计算文件的 SHA256 哈希值"""
+        h = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                h.update(chunk)
+        return h.hexdigest()
 
 
 if __name__ == "__main__":

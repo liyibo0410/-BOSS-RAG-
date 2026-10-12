@@ -53,7 +53,7 @@ class NodeImportMilvus(BaseNode):
         self._step_3_clean_old_data(client, chunks_json_data)
 
         # 步骤4：批量插入数据+主键chunk_id回填
-        updated_chunks = self._step_4_insert_data(client, chunks_json_data)
+        updated_chunks = self._step_4_insert_data(client, chunks_json_data, state)
 
         # 步骤5：更新全局状态，将回填后的切片回传下游
         state["chunks"] = updated_chunks
@@ -195,23 +195,18 @@ class NodeImportMilvus(BaseNode):
             self.logger.error(f"Milvus 数据删除失败: {str(e)}")
             raise MilvusError(f"Milvus 数据删除失败: {str(e)}")
 
-    def _step_4_insert_data(self, client, chunks_json_data):
+    def _step_4_insert_data(self, client, chunks_json_data, state=None):
         """
         步骤4：批量插入切片数据到Milvus+主键回填
-        核心逻辑：
-            1. 批量插入数据：提升入库效率，减少Milvus连接次数
-            2. 回填chunk_id：将Milvus生成的自增主键回填到切片，供下游业务使用
-        参数：
-            client - MilvusClient实例
-            chunks_json_data: List[Dict[str, Any]] - 待入库的切片列表
-        返回：
-            List[Dict[str, Any]] - 回填了chunk_id的切片列表
         """
-        # 1. 填充part字段
+        file_hash = (state or {}).get("file_hash", "")
+        owner = (state or {}).get("owner", "public")
+
         for item in chunks_json_data:
             item["part"] = 0
+            item["file_hash"] = file_hash
+            item["owner"] = owner
 
-        # 2. 批量插入数据 往milvus里面插入数据
         result = client.insert(
             collection_name=milvus_config.chunks_collection,
             data=chunks_json_data

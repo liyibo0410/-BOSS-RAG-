@@ -58,19 +58,21 @@ class NodeRerank(NodeBase):
         final_docs = []
 
         # 1. 获取本地 RRF 的文档  rrf_chunks向量融合的结果
-        for rrf_doc in state.get('rrf_chunks'):
+        for rrf_doc in (state.get('rrf_chunks') or []):
 
             format_rrf_doc = {
                 "content": rrf_doc.get('content'),
                 "title": rrf_doc.get('title'),
+                "file_title": rrf_doc.get('file_title', ''),
+                "item_name": rrf_doc.get('item_name', ''),
                 "chunk_id": rrf_doc.get('chunk_id'),
                 "url": None,
-                "source": "local"  # 本地
+                "source": "local"
             }
             final_docs.append(format_rrf_doc)
 
         # 2. 获取 web 远程的文档
-        for web_doc in state.get('web_search_docs'):
+        for web_doc in (state.get('web_search_docs') or []):
 
             format_web_doc = {
                 "content": web_doc.get('snippet'),

@@ -55,16 +55,20 @@ class NodeAnswerOutput(NodeBase):
         # 阶段四： 提取图片URL（用于历史记录和前端展示）
         image_urls = self._extract_images_from_docs(state.get("reranked_docs") or [])
 
+        # 阶段四-B：提取参考来源（答案溯源）
+        sources = self._extract_sources(state.get("reranked_docs") or [])
+        state["sources"] = sources
+        set_task_result(state["session_id"], "sources", sources)
+
         # 阶段五：把答案写入到mongodb的history中
         if state.get("answer"):
             logger.info("---写入MongoDB历史记录---")
             self._step_4_write_history(state, image_urls=image_urls)
 
-        # 记录节点完成状态：本节点是查询流程的最后一个节点，
-        # 不记录会导致前端轮询时该节点永远不显示为已完成
+        # 记录节点完成状态
         add_done_task(state['session_id'], self.name, state.get("is_stream"))
 
-        # 阶段六: 流式输出结束，发送 final 事件 [最后兜底，确保图片都能争取渲染和结束]
+        # 阶段六: 发送 final 事件
         logger.info(f"---发送 final 事件---图片为：{image_urls}")
         if state.get("is_stream"):
             push_to_session(
@@ -73,7 +77,8 @@ class NodeAnswerOutput(NodeBase):
                 {
                     "answer": state["answer"],
                     "status": "completed",
-                    "image_urls": image_urls  # 发送图片URL给前端
+                    "image_urls": image_urls,
+                    "sources": sources
                 }
             )
 
@@ -234,8 +239,11 @@ class NodeAnswerOutput(NodeBase):
 
             except Exception as e:
                 logger.error(f"流式生成出错: {e}", exc_info=True)
-                # 发生错误时，尝试推送到前端
                 push_to_session(session_id, SSEEvent.ERROR, {"error": str(e)})
+                fallback_text = self._build_fallback_answer(state)
+                final_text = final_text or fallback_text
+                push_to_session(session_id, SSEEvent.DELTA, {"delta": fallback_text})
+                push_to_session(session_id, SSEEvent.END, {"answer": fallback_text})
 
             state["answer"] = final_text
         else:
@@ -249,10 +257,50 @@ class NodeAnswerOutput(NodeBase):
                 logger.info(f"生成回答完成，长度: {len(content)}")
             except Exception as e:
                 logger.error(f"生成回答出错: {e}", exc_info=True)
-                state["answer"] = "抱歉，生成回答时出现错误。"
+                fallback_text = self._build_fallback_answer(state)
+                state["answer"] = fallback_text
+                set_task_result(session_id, "answer", fallback_text)
 
         return state
 
+    @staticmethod
+    def _build_fallback_answer(state: QueryGraphState) -> str:
+        """LLM 不可用时，直接返回检索到的 top 文档内容作为兜底答案"""
+        docs = state.get("rerank_docs") or state.get("rrf_chunks") or []
+        if not docs:
+            return "抱歉，当前 AI 服务暂时不可用，请稍后重试。"
+        parts = []
+        for i, doc in enumerate(docs[:3], 1):
+            text = doc.get("content") or doc.get("text") or doc.get("snippet") or ""
+            title = doc.get("title") or ""
+            if text:
+                header = f"【参考{i}】{title}" if title else f"【参考{i}】"
+                parts.append(f"{header}\n{text[:500]}")
+        if not parts:
+            return "抱歉，当前 AI 服务暂时不可用，请稍后重试。"
+        return "以下是从知识库中检索到的相关内容，供参考：\n\n" + "\n\n".join(parts)
+
+    @staticmethod
+    def _extract_sources(docs: List[Dict]) -> List[Dict]:
+        """从 reranked_docs 中提取参考来源元数据"""
+        sources = []
+        seen = set()
+        for doc in docs:
+            chunk_id = doc.get("chunk_id") or ""
+            if chunk_id and chunk_id in seen:
+                continue
+            if chunk_id:
+                seen.add(chunk_id)
+            sources.append({
+                "chunk_id": chunk_id,
+                "file_title": doc.get("file_title", ""),
+                "title": doc.get("title", ""),
+                "item_name": doc.get("item_name", ""),
+                "source": doc.get("source", "local"),
+                "score": round(doc.get("score") or 0, 4),
+                "content_preview": (doc.get("content") or "")[:200]
+            })
+        return sources[:5]
 
     def _extract_images_from_docs(self, docs):
         """
@@ -319,7 +367,7 @@ class NodeAnswerOutput(NodeBase):
         logger.info(f"图片提取完成，共找到 {len(images)} 张唯一图片: {images}")
         return images
 
-    def _step_4_write_history(seld, state: QueryGraphState, image_urls=None) -> QueryGraphState:
+    def _step_4_write_history(self, state: QueryGraphState, image_urls=None) -> QueryGraphState:
         """
         阶段四：把本轮答案写入 MongoDB history。
         利用 utils/mongo_history_utils.py 中的 save_chat_messages 方法。

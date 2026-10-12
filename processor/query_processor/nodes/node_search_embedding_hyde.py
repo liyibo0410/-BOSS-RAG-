@@ -81,7 +81,7 @@ class NodeSearchEmbeddingHyde(NodeBase):
             return hyde_doc
         except Exception as e:
             logger.exception(f"步骤1：生成假设文档失败：{e}")
-            return e
+            return ""
 
     def _step_2_search_embedding_hyde(
             self,
@@ -139,14 +139,14 @@ class NodeSearchEmbeddingHyde(NodeBase):
                 collection_name=collection_name,
                 reqs=reqs,
                 ranker_weights=(0.8,0.2),
-                output_fields=["chunk_id","content","item_name"],
+                output_fields=["chunk_id","content","item_name","file_title","title"],
             )
 
             return res[0] if res else []
 
         except Exception as e:
             logger.error(f"步骤2：检索过程发生异常：{e}")
-            return e
+            return []
 
 
 if __name__ == "__main__":

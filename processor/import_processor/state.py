@@ -33,6 +33,8 @@ class ImportGraphState(TypedDict):
     # ==================== 文件信息 ====================
     file_title: str                 # 文件标题（不含扩展名）
     item_name: str                  # 识别出的商品/产品名称
+    file_hash: str                  # 文件 SHA256 哈希（增量更新用）
+    owner: str                      # 文档所有者/可见范围（权限隔离用）
 
     # ==================== 处理中间数据 ====================
     md_content: str                 # Markdown 文档内容

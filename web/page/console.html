@@ -6,127 +6,190 @@
     <title>BOSS智库 · 统一控制台</title>
     <style>
         :root {
-            --primary: #14263F;
-            --accent: #3D6DA8;
-            --accent-hover: #345E94;
-            --bg: #F6F7F9;
-            --card: #FFFFFF;
-            --border: #E4E7EC;
-            --text-main: #1F2A3A;
-            --text-sub: #5B6472;
-            --success: #3E8E7E;
-            --warning: #C98A3D;
-            --danger: #C0564F;
-            --radius: 6px;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --primary-light: #eef2ff;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --text-secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --radius: 8px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.025);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-            background-color: var(--bg);
-            color: var(--text-main);
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
+        }
+        
+        /* 布局 */
+        .layout {
             display: flex;
-            justify-content: center;
-            padding: 32px 20px;
+            min-height: 100vh;
         }
-        .container {
-            width: 100%;
-            max-width: 980px;
+        
+        /* 侧边栏 */
+        .sidebar {
+            width: 240px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 24px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
         }
-        /* 页头 */
-        .header { margin-bottom: 20px; }
-        .header h1 {
-            font-size: 22px;
-            font-weight: 600;
-            color: var(--primary);
-            letter-spacing: 0.3px;
-        }
-        .header .subtitle {
-            margin-top: 6px;
-            font-size: 13px;
-            color: var(--text-sub);
-        }
-        /* Tab 导航 */
-        .tabs {
-            display: flex;
-            gap: 4px;
+        .sidebar-header {
+            padding: 0 20px 24px;
             border-bottom: 1px solid var(--border);
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
-        .tab-btn {
-            padding: 10px 20px;
-            border: none;
-            background: transparent;
-            font-size: 14px;
-            color: var(--text-sub);
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1px;
-            transition: color 0.15s ease, border-color 0.15s ease;
-            font-family: inherit;
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-        .tab-btn:hover { color: var(--primary); }
-        .tab-btn.active {
-            color: var(--primary);
+        .sidebar-logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar-logo-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: white;
+        }
+        .sidebar-logo-text h2 {
+            font-size: 15px;
             font-weight: 600;
-            border-bottom-color: var(--accent);
+            color: var(--text);
         }
-        .tab-panel { display: none; }
-        .tab-panel.active { display: block; }
-
+        .sidebar-logo-text p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        
+        .nav-menu {
+            padding: 0 12px;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-bottom: 4px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        .nav-item:hover {
+            background: var(--bg);
+            color: var(--text);
+        }
+        .nav-item.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 500;
+        }
+        .nav-item svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+        }
+        
+        /* 主内容区 */
+        .main {
+            flex: 1;
+            margin-left: 240px;
+            padding: 32px;
+        }
+        
+        /* 页头 */
+        .page-header {
+            margin-bottom: 24px;
+        }
+        .page-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+        .page-header p {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
         /* 卡片 */
         .card {
-            background: var(--card);
+            background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
             padding: 24px;
+            box-shadow: var(--shadow);
         }
-
-        /* 通用按钮 */
-        .btn {
-            background-color: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 9px 18px;
-            border-radius: var(--radius);
-            cursor: pointer;
-            font-size: 14px;
-            font-family: inherit;
-            transition: background-color 0.15s ease;
-        }
-        .btn:hover { background-color: var(--accent-hover); }
-        .btn:disabled { background-color: #B9C2CE; cursor: not-allowed; }
-
-        /* Tab1 上传 */
+        
+        /* Tab 面板 */
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        
+        /* 上传区域 */
         .upload-area {
-            border: 1px dashed rgba(61, 109, 168, 0.55);
+            border: 2px dashed var(--border);
             border-radius: var(--radius);
-            padding: 44px 20px;
+            padding: 48px 24px;
             text-align: center;
             cursor: pointer;
-            background: #FBFCFD;
-            transition: background-color 0.15s ease, border-color 0.15s ease;
-            margin-bottom: 20px;
+            transition: all 0.2s;
+            background: var(--bg);
         }
         .upload-area:hover, .upload-area.dragover {
-            background-color: #F0F5FB;
-            border-color: var(--accent);
+            border-color: var(--primary);
+            background: var(--primary-light);
         }
-        .upload-area .icon {
-            width: 42px; height: 42px;
-            margin: 0 auto 12px;
-            border-radius: var(--radius);
-            background: #E8EEF6;
-            display: flex; align-items: center; justify-content: center;
+        .upload-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 16px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .upload-area .icon svg { width: 22px; height: 22px; stroke: var(--accent); }
-        .upload-area p { font-size: 14px; color: var(--text-sub); }
-        .upload-area .hint { font-size: 12px; color: #9AA3B0; margin-top: 4px; }
+        .upload-icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--primary);
+        }
+        .upload-area h3 {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+        .upload-area p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
         .file-input { display: none; }
-
-        .file-list { margin-top: 4px; }
+        
+        /* 文件列表 */
+        .file-list { margin-top: 16px; }
         .file-item {
-            background: var(--card);
+            background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
             padding: 14px 16px;
@@ -134,196 +197,508 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: box-shadow 0.15s ease;
+            transition: box-shadow 0.15s;
         }
-        .file-item:hover { box-shadow: 0 1px 4px rgba(20, 38, 63, 0.06); }
-        .file-info { display: flex; flex-direction: column; flex: 1; margin-right: 20px; }
-        .file-name { font-weight: 600; color: var(--text-main); font-size: 14px; }
-        .file-size { font-size: 12px; color: var(--text-sub); margin-top: 4px; }
+        .file-item:hover {
+            box-shadow: var(--shadow-lg);
+        }
+        .file-info {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            margin-right: 16px;
+        }
+        .file-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text);
+        }
+        .file-size {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
         .status-badge {
             padding: 4px 12px;
             border-radius: 12px;
             font-size: 12px;
             font-weight: 500;
-            min-width: 72px;
-            text-align: center;
-            color: #fff;
-            flex-shrink: 0;
+            color: white;
         }
-        .status-uploading { background-color: var(--warning); }
-        .status-processing { background-color: var(--accent); }
-        .status-completed { background-color: var(--success); }
-        .status-error { background-color: var(--danger); }
+        .status-uploading { background: var(--warning); }
+        .status-processing { background: var(--primary); }
+        .status-completed { background: var(--success); }
+        .status-error { background: var(--danger); }
+        
         .progress-bar-container {
-            width: 100%; height: 3px;
-            background-color: #EEF1F5;
-            margin-top: 10px;
+            width: 100%;
+            height: 3px;
+            background: var(--bg);
+            margin-top: 8px;
             border-radius: 2px;
             overflow: hidden;
             display: none;
         }
-        .progress-bar { height: 100%; background-color: var(--accent); width: 0%; transition: width 0.15s ease, background-color 0.15s ease; }
-        .log-details { margin-top: 8px; font-size: 12px; color: var(--text-sub); }
-        .log-details summary { cursor: pointer; user-select: none; color: var(--text-sub); }
-        .log-list { margin: 6px 0 0 16px; padding: 0; }
-        .log-list li { margin: 2px 0; line-height: 1.5; }
-
-        /* Tab2 文档管理 */
+        .progress-bar {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .log-details {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .log-details summary {
+            cursor: pointer;
+        }
+        .log-list {
+            margin: 6px 0 0 16px;
+            padding: 0;
+        }
+        .log-list li {
+            margin: 2px 0;
+        }
+        
+        /* 文档管理表格 */
         .doc-toolbar {
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
         }
-        .doc-toolbar .note { font-size: 12px; color: var(--text-sub); }
-        .doc-toolbar .btn { padding: 7px 14px; font-size: 13px; }
+        .doc-toolbar .note {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn:hover {
+            background: var(--primary-hover);
+        }
         .section-title {
-            font-weight: 600; color: var(--primary); margin: 20px 0 10px; font-size: 14px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            margin: 20px 0 12px;
         }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #EEF1F5; }
-        th {
-            color: var(--text-sub);
-            font-weight: 500;
-            background: #FAFBFD;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px 12px;
             border-bottom: 1px solid var(--border);
         }
-        tr:last-child td { border-bottom: none; }
-        .empty-tip { color: #9AA3B0; text-align: center; padding: 28px 0; font-size: 13px; }
-        .badge {
-            display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; color: #fff;
+        th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            background: var(--bg);
         }
-        .badge.completed { background-color: var(--success); }
-        .badge.processing { background-color: var(--accent); }
-        .badge.pending { background-color: var(--warning); }
-        .badge.failed { background-color: var(--danger); }
-        .badge.none { background-color: #B9C2CE; }
-
-        /* Tab3 问答 */
-        .qa-box { display: flex; gap: 8px; margin-bottom: 18px; }
-        .qa-box input {
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: white;
+        }
+        .badge.completed { background: var(--success); }
+        .badge.processing { background: var(--primary); }
+        .badge.pending { background: var(--warning); }
+        .badge.failed { background: var(--danger); }
+        
+        /* 问答界面 */
+        .qa-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 120px);
+        }
+        .qa-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 16px;
+        }
+        .qa-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .qa-header-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-light);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qa-header-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--primary);
+        }
+        .qa-header-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .qa-header-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .qa-clear-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .qa-clear-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .qa-thread {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 8px 0;
+        }
+        .qa-welcome {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--text-secondary);
+        }
+        .qa-welcome-icon {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 16px;
+            background: var(--primary-light);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qa-welcome-icon svg {
+            width: 28px;
+            height: 28px;
+            stroke: var(--primary);
+        }
+        .qa-welcome h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+        .qa-welcome p {
+            font-size: 14px;
+        }
+        
+        .qa-msg {
+            display: flex;
+            gap: 12px;
+            max-width: 80%;
+        }
+        .qa-msg-q {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+        .qa-msg-a {
+            align-self: flex-start;
+        }
+        .qa-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .qa-avatar-q {
+            background: var(--primary);
+            color: white;
+        }
+        .qa-avatar-a {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        .qa-bubble {
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .qa-bubble-q {
+            background: var(--primary);
+            color: white;
+        }
+        .qa-bubble-a {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        
+        .qa-input-area {
+            display: flex;
+            gap: 10px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            margin-top: 16px;
+        }
+        .qa-input-area textarea {
             flex: 1;
             padding: 10px 14px;
             border: 1px solid var(--border);
-            border-radius: var(--radius);
+            border-radius: 8px;
             font-size: 14px;
             font-family: inherit;
             outline: none;
-            background: var(--card);
-            color: var(--text-main);
-            transition: border-color 0.15s ease;
+            resize: none;
+            height: 42px;
         }
-        .qa-box input:focus { border-color: var(--accent); }
-        .qa-thread { display: flex; flex-direction: column; gap: 12px; }
-        .qa-item { max-width: 86%; padding: 10px 14px; border-radius: var(--radius); font-size: 14px; line-height: 1.7; }
-        .qa-q { align-self: flex-end; background-color: var(--accent); color: #fff; }
-        .qa-a { align-self: flex-start; background-color: #E9EDF3; color: var(--text-main); white-space: pre-wrap; word-break: break-word; }
-        .qa-loading { color: var(--text-sub); font-size: 13px; align-self: flex-start; }
+        .qa-input-area textarea:focus {
+            border-color: var(--primary);
+        }
+        .qa-input-area .btn {
+            padding: 0 20px;
+            height: 42px;
+        }
+        .qa-input-hint {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header">
-        <h1>BOSS智库 · 统一控制台</h1>
-        <div class="subtitle">导入服务 + 查询服务合并后台 · 单进程单端口</div>
-    </div>
-
-    <div class="tabs">
-        <button class="tab-btn active" data-tab="tab-upload">上传导入</button>
-        <button class="tab-btn" data-tab="tab-docs">文档管理</button>
-        <button class="tab-btn" data-tab="tab-qa">检索问答</button>
-    </div>
-
-    <!-- Tab1 上传导入 -->
-    <div class="tab-panel active" id="tab-upload">
-        <div class="card">
-            <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
-                <div class="icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 16V4"/><path d="M7 9l5-5 5 5"/>
-                        <path d="M5 20h14"/>
+<div class="layout">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <div class="sidebar-logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                     </svg>
                 </div>
-                <p>点击或拖拽文件到此处</p>
-                <div class="hint">支持 PDF / Markdown，多文件批量导入</div>
-                <input type="file" id="fileInput" class="file-input" multiple accept=".pdf,.md">
+                <div class="sidebar-logo-text">
+                    <h2>BOSS智库</h2>
+                    <p>智能知识管理平台</p>
+                </div>
             </div>
-            <div id="fileList" class="file-list"></div>
         </div>
-    </div>
-
-    <!-- Tab2 文档管理 -->
-    <div class="tab-panel" id="tab-docs">
-        <div class="card">
-            <div class="doc-toolbar">
-                <span class="note">数据来自内存任务追踪，服务重启后清空</span>
-                <button class="btn" onclick="refreshDocs()">刷新</button>
+        
+        <nav class="nav-menu">
+            <div class="nav-item active" data-tab="tab-upload">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <span>上传导入</span>
             </div>
-            <div class="section-title">已入库文档</div>
-            <table>
-                <thead><tr><th>文件名</th><th>创建时间</th><th>状态</th></tr></thead>
-                <tbody id="docTableBody"></tbody>
-            </table>
-            <div class="section-title">全部导入任务</div>
-            <table>
-                <thead><tr><th>文件名</th><th>Task ID</th><th>创建时间</th><th>状态</th><th>已完成节点</th></tr></thead>
-                <tbody id="taskTableBody"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Tab3 检索问答 -->
-    <div class="tab-panel" id="tab-qa">
-        <div class="card">
-            <div class="qa-box">
-                <input type="text" id="qaInput" placeholder="输入问题，回车发送（同步模式）">
-                <button class="btn" onclick="sendQuery()">发送</button>
+            <div class="nav-item" data-tab="tab-docs">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                <span>文档管理</span>
             </div>
-            <div class="qa-thread" id="qaThread"></div>
+            <div class="nav-item" data-tab="tab-qa">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span>检索问答</span>
+            </div>
+        </nav>
+    </aside>
+    
+    <!-- 主内容 -->
+    <main class="main">
+        <!-- 上传导入 -->
+        <div class="tab-panel active" id="tab-upload">
+            <div class="page-header">
+                <h1>文件导入</h1>
+                <p>上传 PDF 或 Markdown 文件，自动解析并入库</p>
+            </div>
+            
+            <div class="card">
+                <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="12" y1="18" x2="12" y2="12"/>
+                            <polyline points="9 15 12 12 15 15"/>
+                        </svg>
+                    </div>
+                    <h3>点击或拖拽文件到此处</h3>
+                    <p>支持 PDF / Markdown，多文件批量导入</p>
+                    <input type="file" id="fileInput" class="file-input" multiple accept=".pdf,.md">
+                </div>
+                <div id="fileList" class="file-list"></div>
+            </div>
         </div>
-    </div>
+        
+        <!-- 文档管理 -->
+        <div class="tab-panel" id="tab-docs">
+            <div class="page-header">
+                <h1>文档管理</h1>
+                <p>查看已入库文档和导入任务状态</p>
+            </div>
+            
+            <div class="card">
+                <div class="doc-toolbar">
+                    <span class="note">数据来自内存任务追踪，服务重启后清空</span>
+                    <button class="btn" onclick="refreshDocs()">刷新</button>
+                </div>
+                
+                <div class="section-title">已入库文档</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>文件名</th>
+                            <th>创建时间</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="docTableBody"></tbody>
+                </table>
+                
+                <div class="section-title">全部导入任务</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>文件名</th>
+                            <th>Task ID</th>
+                            <th>创建时间</th>
+                            <th>状态</th>
+                            <th>已完成节点</th>
+                        </tr>
+                    </thead>
+                    <tbody id="taskTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 检索问答 -->
+        <div class="tab-panel" id="tab-qa">
+            <div class="page-header">
+                <h1>检索问答</h1>
+                <p>基于 RAG 技术，从知识库中检索并生成答案</p>
+            </div>
+            
+            <div class="card">
+                <div class="qa-container">
+                    <div class="qa-header">
+                        <div class="qa-header-left">
+                            <div class="qa-header-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <path d="M21 21l-4.35-4.35"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <div class="qa-header-title">知识库检索问答</div>
+                                <div class="qa-header-desc">基于 RAG 的智能问答，从知识库中检索相关内容</div>
+                            </div>
+                        </div>
+                        <button class="qa-clear-btn" onclick="clearQAThread()">清空对话</button>
+                    </div>
+                    
+                    <div class="qa-thread" id="qaThread">
+                        <div class="qa-welcome" id="qaWelcome">
+                            <div class="qa-welcome-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                            </div>
+                            <h3>你好，我是 BOSS 智库助手</h3>
+                            <p>输入你的问题，我会从知识库中检索相关内容并给出回答</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="qa-input-area">
+                            <textarea id="qaInput" placeholder="输入问题，Enter 发送，Shift+Enter 换行" rows="1"></textarea>
+                            <button class="btn" onclick="sendQuery()">发送</button>
+                        </div>
+                        <div class="qa-input-hint">Enter 发送 / Shift+Enter 换行</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
 </div>
 
 <script>
-    // ===== Tab 切换 =====
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    // Tab 切换
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById(btn.dataset.tab).classList.add('active');
-            if (btn.dataset.tab === 'tab-docs') refreshDocs();
+            item.classList.add('active');
+            document.getElementById(item.dataset.tab).classList.add('active');
+            if (item.dataset.tab === 'tab-docs') refreshDocs();
         });
     });
-
-    // ===== Tab1 上传导入 =====
+    
+    // 上传功能
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const fileList = document.getElementById('fileList');
-
+    
     dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
     dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); });
     dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
     fileInput.addEventListener('change', (e) => { handleFiles(e.target.files); e.target.value = ''; });
-
+    
     function handleFiles(files) { Array.from(files).forEach(uploadFile); }
-
+    
     function updateProgressBar(bar, pct) {
         bar.style.width = pct + '%';
-        bar.style.backgroundColor = pct >= 100 ? 'var(--success)' : 'var(--accent)';
     }
-
+    
     function normalizeDoneLog(t) { return (typeof t === 'string' && t.endsWith('已完成')) ? t : `${t}已完成`; }
     function normalizeRunningLog(t) {
         if (typeof t !== 'string') return String(t);
         return t.startsWith('正在进行') ? (t.endsWith('...') ? t : `${t}...`) : `正在进行${t}...`;
     }
-
+    
     async function uploadFile(file) {
         const id = 'file-' + Math.random().toString(36).substr(2, 9);
         const html = `
             <div class="file-item" id="${id}">
                 <div class="file-info">
-                    <span class="file-name"></span>
-                    <span class="file-size"></span>
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-size">${(file.size / 1024).toFixed(2)} KB</span>
                     <div class="progress-bar-container"><div class="progress-bar"></div></div>
                     <details class="log-details"><summary>日志（点击展开）</summary><ul class="log-list"></ul></details>
                 </div>
@@ -331,16 +706,13 @@
             </div>`;
         fileList.insertAdjacentHTML('afterbegin', html);
         const itemEl = document.getElementById(id);
-        itemEl.querySelector('.file-name').textContent = file.name;
-        itemEl.querySelector('.file-size').textContent = (file.size / 1024).toFixed(2) + ' KB';
         const statusBadge = itemEl.querySelector('.status-badge');
         const progressBar = itemEl.querySelector('.progress-bar');
         const progressContainer = itemEl.querySelector('.progress-bar-container');
-        const logListEl = itemEl.querySelector('.log-list');
-        const logDetails = itemEl.querySelector('.log-details');
-
+        
         const formData = new FormData();
         formData.append('files', file);
+        
         try {
             progressContainer.style.display = 'block';
             updateProgressBar(progressBar, 50);
@@ -358,9 +730,8 @@
             statusBadge.className = 'status-badge status-error';
         }
     }
-
+    
     function renderLogs(itemEl, doneList, runningList) {
-        const logDetails = itemEl.querySelector('.log-details');
         const logSummary = itemEl.querySelector('.log-details summary');
         const logListEl = itemEl.querySelector('.log-list');
         const done = Array.isArray(doneList) ? doneList : [];
@@ -369,13 +740,18 @@
         logListEl.innerHTML = '';
         const lines = [...done.map(normalizeDoneLog), ...running.map(normalizeRunningLog)];
         if (lines.length === 0) {
-            const li = document.createElement('li'); li.textContent = '暂无日志'; logListEl.appendChild(li);
+            const li = document.createElement('li');
+            li.textContent = '暂无日志';
+            logListEl.appendChild(li);
         } else {
-            lines.forEach(line => { const li = document.createElement('li'); li.textContent = line; logListEl.appendChild(li); });
+            lines.forEach(line => {
+                const li = document.createElement('li');
+                li.textContent = line;
+                logListEl.appendChild(li);
+            });
         }
-        if (lines.length === 0) logDetails.open = false;
     }
-
+    
     function pollStatus(taskId, itemEl) {
         const statusBadge = itemEl.querySelector('.status-badge');
         const progressBar = itemEl.querySelector('.progress-bar');
@@ -400,93 +776,127 @@
             } catch (e) { console.error('Polling error', e); }
         }, 2000);
     }
-
-    // ===== Tab2 文档管理 =====
-    const STATUS_CN = {
-        'pending': '待处理', 'processing': '处理中', 'completed': '已完成', 'failed': '失败'
-    };
-    function badge(status) {
-        const s = status || 'none';
-        const cn = STATUS_CN[s] || s;
-        return `<span class="badge ${s}">${cn}</span>`;
-    }
-
+    
+    // 文档管理
     async function refreshDocs() {
-        const docBody = document.getElementById('docTableBody');
-        const taskBody = document.getElementById('taskTableBody');
         try {
-            const docRes = await fetch('/api/import/documents');
-            const docData = await docRes.json();
-            const docs = docData.documents || [];
-            docBody.innerHTML = docs.length === 0
-                ? `<tr><td colspan="3" class="empty-tip">暂无已入库文档</td></tr>`
-                : docs.map(d => `<tr><td>${escapeHtml(d.filename)}</td><td>${escapeHtml(d.created_at)}</td><td>${badge(d.status)}</td></tr>`).join('');
-
-            const taskRes = await fetch('/api/import/tasks');
-            const taskData = await taskRes.json();
-            const tasks = taskData.tasks || [];
-            taskBody.innerHTML = tasks.length === 0
-                ? `<tr><td colspan="5" class="empty-tip">暂无导入任务</td></tr>`
-                : tasks.map(t => `<tr>
-                    <td>${escapeHtml(t.filename)}</td>
-                    <td style="font-size:12px;color:var(--text-sub);">${escapeHtml(shortId(t.task_id))}</td>
-                    <td>${escapeHtml(t.created_at)}</td>
-                    <td>${badge(t.status)}</td>
-                    <td style="font-size:12px;color:var(--text-sub);">${escapeHtml((t.done_list || []).join('、') || '—')}</td>
-                </tr>`).join('');
-        } catch (e) {
-            console.error(e);
-            docBody.innerHTML = `<tr><td colspan="3" class="empty-tip">接口请求失败：${escapeHtml(e.message)}</td></tr>`;
-            taskBody.innerHTML = '';
+            const res = await fetch('/docs');
+            const data = await res.json();
+            renderDocTable(data.docs || []);
+            renderTaskTable(data.tasks || []);
+        } catch (e) { console.error('Refresh docs error', e); }
+    }
+    
+    function renderDocTable(docs) {
+        const tbody = document.getElementById('docTableBody');
+        tbody.innerHTML = '';
+        if (docs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-secondary);padding:24px;">暂无文档</td></tr>';
+            return;
         }
+        docs.forEach(doc => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${doc.name}</td>
+                <td>${doc.created_at || '-'}</td>
+                <td><span class="badge ${doc.status}">${doc.status}</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
-
-    function shortId(id) { return id ? id.slice(0, 8) : '—'; }
-    function escapeHtml(s) {
-        return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    
+    function renderTaskTable(tasks) {
+        const tbody = document.getElementById('taskTableBody');
+        tbody.innerHTML = '';
+        if (tasks.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:24px;">暂无任务</td></tr>';
+            return;
+        }
+        tasks.forEach(task => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${task.name}</td>
+                <td>${task.id}</td>
+                <td>${task.created_at || '-'}</td>
+                <td><span class="badge ${task.status}">${task.status}</span></td>
+                <td>${(task.done_list || []).length}</td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
-
-    // ===== Tab3 检索问答 =====
-    const qaInput = document.getElementById('qaInput');
+    
+    // 问答功能
     const qaThread = document.getElementById('qaThread');
-    let sessionId = '';
-
-    qaInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendQuery(); });
-
+    const qaInput = document.getElementById('qaInput');
+    
+    qaInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendQuery();
+        }
+    });
+    
     async function sendQuery() {
-        const q = qaInput.value.trim();
-        if (!q) return;
-        if (!sessionId) sessionId = 'sess-' + Math.random().toString(36).substr(2, 12);
+        const question = qaInput.value.trim();
+        if (!question) return;
+        
+        // 隐藏欢迎界面
+        const welcome = document.getElementById('qaWelcome');
+        if (welcome) welcome.style.display = 'none';
+        
+        // 添加用户消息
+        addQAMessage(question, 'q');
         qaInput.value = '';
-        const qItem = document.createElement('div');
-        qItem.className = 'qa-item qa-q';
-        qItem.textContent = q;
-        qaThread.appendChild(qItem);
-
-        const loading = document.createElement('div');
-        loading.className = 'qa-loading';
-        loading.textContent = '思考中...';
-        qaThread.appendChild(loading);
-
+        
+        // 添加AI加载消息
+        const aiMsgId = addQAMessage('正在思考...', 'a', true);
+        
         try {
             const res = await fetch('/query', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: q, session_id: sessionId, is_stream: false })
+                body: JSON.stringify({ query: question })
             });
             const data = await res.json();
-            loading.remove();
-            const aItem = document.createElement('div');
-            aItem.className = 'qa-item qa-a';
-            aItem.textContent = data.answer || '（无返回结果）';
-            qaThread.appendChild(aItem);
+            
+            // 更新AI消息
+            const aiMsg = document.getElementById(aiMsgId);
+            if (aiMsg) {
+                aiMsg.querySelector('.qa-bubble').textContent = data.answer || '抱歉，未能找到答案';
+            }
         } catch (e) {
-            loading.remove();
-            const aItem = document.createElement('div');
-            aItem.className = 'qa-item qa-a';
-            aItem.textContent = '请求失败：' + e.message;
-            qaThread.appendChild(aItem);
+            const aiMsg = document.getElementById(aiMsgId);
+            if (aiMsg) {
+                aiMsg.querySelector('.qa-bubble').textContent = '请求失败，请稍后重试';
+            }
         }
+    }
+    
+    function addQAMessage(text, type, isLoading = false) {
+        const id = 'msg-' + Math.random().toString(36).substr(2, 9);
+        const html = `
+            <div class="qa-msg qa-msg-${type}" id="${id}">
+                <div class="qa-avatar qa-avatar-${type}">${type === 'q' ? '我' : 'AI'}</div>
+                <div class="qa-bubble qa-bubble-${type}">${isLoading ? '<span style="opacity:0.6;">正在思考...</span>' : text}</div>
+            </div>
+        `;
+        qaThread.insertAdjacentHTML('beforeend', html);
+        qaThread.scrollTop = qaThread.scrollHeight;
+        return id;
+    }
+    
+    function clearQAThread() {
+        qaThread.innerHTML = `
+            <div class="qa-welcome" id="qaWelcome">
+                <div class="qa-welcome-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </div>
+                <h3>你好，我是 BOSS 智库助手</h3>
+                <p>输入你的问题，我会从知识库中检索相关内容并给出回答</p>
+            </div>
+        `;
     }
 </script>
 

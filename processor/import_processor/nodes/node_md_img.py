@@ -63,7 +63,7 @@ class NodeMDImg(BaseNode):
 
         # 步骤3：调用多模态大模型生成图片摘要
         summaries = self._step_3_generate_summaries(md_path_obj.stem, target_images)
-        print(summaries)
+        self.logger.debug(f"图片摘要生成结果: {summaries}")
         # 步骤4：上传图片至MinIO，替换MD图片路径并填充摘要
         new_md_content = self._step_4_upload_and_replace(md_path_obj.stem, target_images, summaries, md_content)
 

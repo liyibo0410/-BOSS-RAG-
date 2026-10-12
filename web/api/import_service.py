@@ -39,26 +39,18 @@ async def get_import_page():
 
 # 4. 后台任务：LangGraph全流程执行
 # 独立于主请求线程，由BackgroundTasks触发，避免阻塞接口响应
-def run_graph_task(task_id: str, file_dir: str, import_file_path: str):
+def run_graph_task(task_id: str, file_dir: str, import_file_path: str, owner: str = "public"):
     """
     LangGraph全流程执行后台任务
-    核心流程：初始化状态 → 流式执行图节点 → 实时更新任务状态 → 异常捕获
-    任务状态更新：pending → processing → completed/failed
-    节点进度更新：每完成一个节点，将节点名加入done_list，供前端轮询查看
-
-    :param task_id: 全局唯一任务ID，关联单个文件的全流程处理
-    :param file_dir: 该任务的本地文件存储目录（含临时文件/解析结果）
-    :param import_file_path: 上传文件的本地绝对路径
     """
     try:
-        # 1. 更新任务全局状态为：处理中
         update_task_status(task_id, "processing")
 
-        # 2. 初始化LangGraph状态
         init_state = {
             "task_id": task_id,
             "file_dir": file_dir,
             "import_file_path": import_file_path,
+            "owner": owner,
         }
 
         # 3. 流式执行LangGraph全流程（stream模式：实时获取每个节点的执行结果）
@@ -74,14 +66,14 @@ def run_graph_task(task_id: str, file_dir: str, import_file_path: str):
     except Exception as e:
         # 5. 捕获全流程异常，更新任务全局状态为：失败，并记录错误日志（含堆栈）
         update_task_status(task_id, "failed")
-        logger.info(f"[{task_id}] LangGraph全流程执行失败，异常信息：{str(e)}", exc_info=True)
+        logger.error(f"[{task_id}] LangGraph全流程执行失败，异常信息：{str(e)}", exc_info=True)
 
 
 # 5. 核心接口：文件上传接口
 # 支持多文件上传，核心流程：接收文件 → 本地保存 → MinIO上传 → 启动后台任务
 # 访问地址：http://localhost:8000/upload （POST请求，form-data格式传参）
 @router.post("/upload", summary="文件上传接口", description="支持多文件批量上传，自动触发知识库导入全流程")
-async def upload_files(background_tasks: BackgroundTasks, files: List[UploadFile] = File(...)):
+async def upload_files(background_tasks: BackgroundTasks, files: List[UploadFile] = File(...), owner: str = "public"):
     """
     文件上传核心接口
     1. 接收前端上传的多文件（PDF/MD为主）
@@ -149,7 +141,7 @@ async def upload_files(background_tasks: BackgroundTasks, files: List[UploadFile
         add_done_task(task_id, "upload_file")
 
         # 8. 将LangGraph全流程处理加入FastAPI后台任务（异步执行，不阻塞当前接口响应）
-        background_tasks.add_task(run_graph_task, task_id, file_dir, import_file_path)
+        background_tasks.add_task(run_graph_task, task_id, file_dir, import_file_path, owner)
         logger.info(f"[{task_id}] 已将LangGraph全流程加入后台任务，任务已启动")
 
     # 9. 所有文件处理完毕，返回上传成功信息和所有TaskID（前端基于TaskID轮询进度）

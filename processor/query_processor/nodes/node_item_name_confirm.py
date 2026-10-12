@@ -45,10 +45,25 @@ class NodeItemNameConfirm(NodeBase):
         # 更新状态
         state["history"] = history  # 很重要
 
-        # 步骤3：用户初始消息保存   "BrotherHAK180烫金机如何调节温度？"
-        # 保存用户这一次 问题
+        # 步骤3：用户初始消息保存
         message_id = save_chat_message(session_id, "user", original_query)
         logger.info(f"步骤3：用户消息已初始保存, ID: {message_id}")
+
+        # 步骤3-B：追问意图检测 — 如果是追问，复用上一轮的 item_names
+        is_followup, prev_item_names = self._detect_followup(original_query, history)
+        if is_followup and prev_item_names:
+            logger.info(f"步骤3-B：检测到追问，复用上一轮商品名: {prev_item_names}")
+            state["rewritten_query"] = original_query
+            state["item_names"] = prev_item_names
+            state["is_followup"] = True
+
+            align_result = {}
+            query_results = self._step_5_vectorize_and_query(prev_item_names)
+            align_result = self._step_6_align_item_names(query_results)
+            state = self._step_7_check_confirmation(state, align_result, history)
+            add_done_task(state.get("session_id"), self.name, state.get("is_stream"))
+            self._step_8_write_history(state, session_id, original_query, message_id)
+            return state
 
         # 步骤4：提取信息  LLM 识别(商品名称)以后 消息历史
         extract_res = self._step_4_extract_info(original_query, history)
@@ -400,20 +415,63 @@ class NodeItemNameConfirm(NodeBase):
             if "rewritten_query" not in result:
                 result["rewritten_query"] = query
 
-            # 9. 给item_names 去除空格
+            # 9. 给item_names 去除首尾空白和换行，保留词间空格
             result["item_names"] = [
-                name.replace(" ", "").replace("\n", "").replace("\t", "").replace("\r", "")
+                name.strip().replace("\n", "").replace("\t", "").replace("\r", "")
                 for name in result["item_names"]
             ]
 
-            # 10、返回解析后的提取结果
+            # 10. 兜底：如果 LLM 未提取到商品名，用原始查询作为搜索词
+            if not result["item_names"]:
+                result["item_names"] = [query]
+
+            # 11、返回解析后的提取结果
             return result
 
         except Exception as e:
             # 捕获所有异常（如LLM调用失败、JSON解析失败等），记录错误日志
             logger.error(f"大模型调用异常：{e}")
-            # 异常时返回默认结果：空商品名列表+原始查询
-            return {"item_names": [], "rewritten_query": query}
+            # 异常时：用原始查询作为商品名进行向量搜索（而非放弃搜索）
+            return {"item_names": [query], "rewritten_query": query}
+
+    @staticmethod
+    def _detect_followup(query: str, history: list) -> Tuple[bool, List[str]]:
+        """
+        检测当前问题是否为追问（基于规则 + 历史上下文）
+        返回：(是否追问, 上一轮的item_names列表)
+        """
+        followup_keywords = [
+            "怎么说", "什么意思", "详细", "展开", "继续", "然后呢", "还有呢",
+            "具体", "举个例子", "为什么", "原因是", "步骤", "怎么配置", "如何设置",
+            "上面", "刚才", "前者", "后者", "第一个", "第二个", "第三个",
+            "这个", "那个", "它", "怎么用", "怎么弄", "怎么办"
+        ]
+        query_lower = query.strip()
+        if len(query_lower) > 30:
+            return False, []
+
+        is_short_followup = any(kw in query_lower for kw in followup_keywords)
+        if not is_short_followup and len(query_lower) > 8:
+            return False, []
+
+        prev_item_names = []
+        for msg in reversed(history):
+            if msg.get("role") == "assistant":
+                continue
+            names = msg.get("item_names") or []
+            if names:
+                prev_item_names = names
+                break
+
+        if not prev_item_names:
+            return False, []
+
+        if not is_short_followup:
+            has_entity = any(name in query_lower for name in prev_item_names)
+            if not has_entity:
+                return False, []
+
+        return True, prev_item_names
 
     def _step_1_validate_param(self, state: QueryGraphState) -> Tuple[str, str]:
 

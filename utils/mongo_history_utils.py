@@ -45,6 +45,7 @@ class HistoryMongoTool:
             self.db = self.client[self.db_name]
             # 获取对话记录的集合（相当于关系型数据库的表），集合名：chat_message
             self.chat_message = self.db["chat_message"]
+            self.chat_feedback = self.db["chat_feedback"]
 
             # 为chat_message集合创建复合索引，提升查询性能
             # 索引规则：session_id升序 + ts降序，适配"按会话查最新记录"的核心查询场景
@@ -245,6 +246,31 @@ def clear_history(session_id: str) -> int:
         logger.error(f"Error clearing history for session {session_id}: {e}")
         # 异常时返回0，标识删除失败
         return 0
+
+
+def save_feedback(session_id: str, message_id: str, feedback: str, comment: str = "") -> bool:
+    """保存用户对回答的反馈（👍👎）"""
+    mongo_tool = get_history_mongo_tool()
+    if mongo_tool is None:
+        return False
+    try:
+        document = {
+            "session_id": session_id,
+            "message_id": message_id,
+            "feedback": feedback,
+            "comment": comment,
+            "ts": datetime.now().timestamp()
+        }
+        mongo_tool.chat_feedback.update_one(
+            {"session_id": session_id, "message_id": message_id},
+            {"$set": document},
+            upsert=True
+        )
+        logger.info(f"Feedback saved: {feedback} for message {message_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving feedback: {e}")
+        return False
 
 
 if __name__ == "__main__":

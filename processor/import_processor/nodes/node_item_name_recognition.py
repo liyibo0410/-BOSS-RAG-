@@ -1,6 +1,7 @@
 # processor/import_processor/nodes/node_item_name_recognition.py
 import json
 import logging
+import re
 from typing import Tuple, Dict, List
 
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -173,16 +174,18 @@ class NodeItemNameRecognition(BaseNode):
         try:
             # 2.1 加载提示词模板
             prompt = f"""
-请从以下信息中识别出商品名称与型号：
+请从以下信息中提取商品的品牌、型号和产品名称：
 文件名：{file_title}
 
 正文切片（用于辅助识别）：
 {context}
 
 要求：
-1. 返回内容为字符串形式，最好是带品牌、型号和名称的完整商品名称。比如：苏伯尓5000W大功率电磁炉；
-2. 返回结果应该只包含商品名称，不要添加任何解释或其他内容；
-3. 如果无法识别商品名称,请返回空字符串。
+1. 只返回商品本身的名称，格式为：品牌 + 型号 + 产品类型。例如：H3C LA2608室内无线网关、华为擎云B530台式机、苏泊尔5000W大功率电磁炉；
+2. 严禁包含以下文档类词汇：用户手册、使用手册、安全手册、操作手册、用户指南、整本手册、说明书、指南、文档等；
+3. 不要直接复制文件名，要从文件名和正文中提炼出真正的商品名称；
+4. 返回结果只包含商品名称字符串，不要添加任何解释、标点或其他内容；
+5. 如果确实无法识别商品名称，请返回空字符串。
 """
             # 2.2 初始化大模型客户端
             llm = ChatOpenAI(
@@ -205,13 +208,18 @@ class NodeItemNameRecognition(BaseNode):
             response = llm.invoke(messages)
             item_name = response.content
             # 提取产品名
-            # 2.5 数据清洗
-            item_name = (item_name.replace(" ", "")
-                         .replace("\n", "")
-                         .replace("\t", "")
-                         .replace("\r", ""))
+            # 2.5 数据清洗：仅去除首尾空白和换行，保留词间空格
+            item_name = item_name.strip().replace("\n", "").replace("\t", "").replace("\r", "")
 
-            # 2.6 如果返回空字符串
+            # 2.6 后处理兜底：过滤文档类词汇（防止 LLM 未遵循提示词约束）
+            doc_words = ["用户手册", "使用手册", "安全手册", "操作手册", "用户指南", "整本手册",
+                         "说明书", "操作指南", "安装指南", "配置指南", "指南", "文档", "手册"]
+            for word in doc_words:
+                item_name = item_name.replace(word, "")
+            # 清理残留的分隔符
+            item_name = item_name.strip(" -—_·,，、")
+
+            # 2.7 如果返回空字符串
             if not item_name:
                 return file_title
 
@@ -219,7 +227,24 @@ class NodeItemNameRecognition(BaseNode):
 
         except Exception as e:
             self.logger.error(f"大模型调用异常：{e}")
-            return file_title
+            return self._fallback_extract_item_name(file_title)
+
+    @staticmethod
+    def _fallback_extract_item_name(file_title: str) -> str:
+        """
+        LLM 不可用时，从文件名启发式提取商品名称。
+        规则：去除文档类词汇和常见后缀，保留品牌+型号+产品类型。
+        """
+        name = file_title
+        doc_words = ["用户手册", "使用手册", "安全手册", "操作手册", "用户指南", "整本手册",
+                     "说明书", "操作指南", "安装指南", "配置指南", "指南", "文档", "手册",
+                     "V1.0", "V2.0", "V3.0", "-6W100", "-整本"]
+        for word in doc_words:
+            name = name.replace(word, "")
+        name = re.sub(r'[\s\-_—·,，、]+$', '', name)
+        name = re.sub(r'^[\s\-_—·,，、]+', '', name)
+        name = name.strip()
+        return name if name else file_title
 
     def _step_4_update_chunks(self, state: ImportGraphState, chunks: List[Dict[str, str]], item_name: str):
         """
