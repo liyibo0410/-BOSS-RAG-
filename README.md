@@ -43,6 +43,8 @@ BOSS 智库是一个基于 **RAG（检索增强生成）** 技术的企业级智
 | **主体识别与标签提取** | 自动识别文档中的商品 / 产品名称，提取关键标签 |
 | **混合向量化** | BGE-M3 模型生成稠密向量 + 稀疏向量，双通道存储 |
 | **数据持久化** | 向量数据写入 Milvus，原始文件存储至 MinIO |
+| **文档增量更新** | 基于 SHA256 文件哈希的增量检测，相同内容自动跳过，避免重复入库 |
+| **权限隔离** | 导入时指定 owner 字段，查询自动过滤 `owner == 用户 or owner == public` |
 
 ### 🔍 智能检索系统
 
@@ -55,6 +57,9 @@ BOSS 智库是一个基于 **RAG（检索增强生成）** 技术的企业级智
 | **智能重排序** | BGE-Reranker 交叉编码器精排 + 断崖检测动态截断 |
 | **流式问答** | SSE（Server-Sent Events）实时推送，逐字输出答案 |
 | **会话历史管理** | MongoDB 持久化对话历史，支持上下文连续对话 |
+| **答案溯源可视化** | 回答附带来源文档片段、chunk_id、相关度评分，支持折叠展开查看原文 |
+| **用户反馈闭环** | 👍👎 反馈按钮 + 文字评论，存入 MongoDB `chat_feedback` 集合，支持后续分析优化 |
+| **多轮追问优化** | 自动识别追问意图（如"怎么说""什么意思"），复用上一轮主体，跳过重复提取 |
 
 ---
 
@@ -72,7 +77,7 @@ BOSS 智库是一个基于 **RAG（检索增强生成）** 技术的企业级智
 │   Qwen 系列大模型 (文本理解/图片总结)  +  BGE 系列 (嵌入/重排) │
 ├─────────────────────────────────────────────────────────┤
 │                   数据存储层                              │
-│      Milvus (向量检索)  |  MongoDB (对话历史)  |  MinIO (文件) │
+│      Milvus (向量检索)  |  MongoDB (对话历史+反馈)  |  MinIO (文件) │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -100,11 +105,11 @@ flowchart LR
 | **后端框架** | [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/) | 异步高性能 HTTP 服务 |
 | **工作流引擎** | [LangGraph](https://langchain-ai.github.io/langgraph/) | 有状态图编排框架 |
 | **LLM 框架** | [LangChain](https://python.langchain.com/) | 统一 LLM 调用接口 |
-| **大语言模型** | [阿里云 DashScope](https://dashscope.aliyun.com/) (Qwen) | qwen-flash / qwen3-vl-flash |
+| **大语言模型** | [阿里云百炼 Token Plan](https://bailian.console.aliyun.com/) (Qwen) | qwen3.7-plus / qwen3-vl-flash |
 | **向量嵌入** | [BGE-M3](https://huggingface.co/BAAI/bge-m3) + OpenAI API | 1024维稠密 + 稀疏向量 |
 | **重排序模型** | [BGE-Reranker-Large](https://huggingface.co/BAAI/bge-reranker-large) | 交叉编码器精排 |
 | **向量数据库** | [Milvus](https://milvus.io/) 2.5.5 | 混合检索（稠密+稀疏） |
-| **文档数据库** | [MongoDB](https://www.mongodb.com/) | 对话历史持久化 |
+| **文档数据库** | [MongoDB](https://www.mongodb.com/) | 对话历史 + 用户反馈持久化 |
 | **对象存储** | [MinIO](https://min.io/) | 文件与图片存储 |
 | **PDF 解析** | [MinerU](https://github.com/opendatalab/MinerU) | 支持公式、表格等复杂排版 |
 | **Python 环境** | [uv](https://github.com/astral-sh/uv) | 极速依赖管理 |
@@ -117,14 +122,14 @@ flowchart LR
 
 - Python 3.11+
 - Docker & Docker Compose
-- 阿里云 DashScope API Key（[申请地址](https://dashscope.console.aliyun.com/)）
+- 阿里云百炼 Token Plan API Key（[申请地址](https://bailian.console.aliyun.com/)）
 - MinerU API Token（[申请地址](https://mineru.net/apiManage/token)）
 
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/your-username/boss-knowledge-base.git
-cd boss-knowledge-base
+git clone https://github.com/liyibo0410/-BOSS-RAG-.git
+cd -BOSS-RAG-
 ```
 
 ### 2. 部署中间件
@@ -158,9 +163,10 @@ cp .env.example .env
 关键配置项：
 
 ```ini
-# LLM API
-OPENAI_API_KEY=sk-your-dashscope-api-key
-OPENAI_API_BASE=https://dashscope.aliyuncs.com/compatible-mode/v1
+# LLM API（阿里云百炼 Token Plan）
+OPENAI_API_KEY=sk-your-token-plan-api-key
+OPENAI_API_BASE=https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+LLM_DEFAULT_MODEL=qwen3.7-plus
 
 # MinerU
 MINERU_API_TOKEN=your-mineru-token
@@ -221,7 +227,7 @@ knowledge/
 │   ├── api/                          #   API 路由层
 │   │   ├── console_service.py        #     统一控制台服务（端口8100，挂载导入+查询路由，新增只读接口）
 │   │   ├── import_service.py         #     导入服务 (POST /upload, GET /status)
-│   │   └── query_service.py          #     查询服务 (POST /query, GET /stream, GET /history)
+│   │   └── query_service.py          #     查询服务 (POST /query, GET /stream, GET /history, POST /feedback)
 │   └── page/                         #   前端页面
 │       ├── console.html              #     统一控制台（三Tab：上传导入 / 文档管理 / 检索问答）
 │       ├── chat.html                 #     聊天界面
@@ -284,23 +290,38 @@ knowledge/
 ### 导入文档
 
 ```bash
-curl -X POST http://localhost:8000/upload \
+# 公开文档（所有人可检索）
+curl -X POST http://localhost:8100/upload \
   -F "file=@product_manual.pdf"
+
+# 私有文档（仅指定 owner 可检索）
+curl -X POST http://localhost:8100/upload \
+  -F "file=@internal_doc.pdf" \
+  -F "owner=department_a"
 ```
 
 ### 智能问答
 
 ```bash
-curl -X POST http://localhost:8001/query \
+curl -X POST http://localhost:8101/query \
   -H "Content-Type: application/json" \
-  -d '{"question": "如何更换电池？", "session_id": "user_001"}'
+  -d '{"question": "如何更换电池？", "session_id": "user_001", "owner": "department_a"}'
 ```
 
 ### 流式获取答案
 
 ```bash
 # SSE 流式推送，逐字输出
-curl -N http://localhost:8001/stream/user_001
+curl -N http://localhost:8101/stream/user_001
+```
+
+### 用户反馈
+
+```bash
+# 提交反馈（👍 或 👎）
+curl -X POST http://localhost:8101/feedback \
+  -H "Content-Type: application/json" \
+  -d '{"session_id": "user_001", "message_id": "msg_001", "feedback": "up", "comment": "回答很准确"}'
 ```
 
 ### 统一控制台与只读接口（合并后台）
@@ -343,6 +364,8 @@ curl http://localhost:8100/api/import/documents
 | **策略路由** | `route_after_entry()` | 根据文件类型动态选择处理分支 |
 | **滑动窗口限流** | `_apply_api_rate_limit()` | 保护 API 调用频率，防止触发限流 |
 | **异步轮询** | MinerU PDF 解析 | 长任务异步处理，固定间隔检查状态 |
+| **多层兜底** | LLM 调用链路 | 每层 LLM 调用均设 fallback，任一环节失败不中断全流程 |
+| **SHA256 去重** | `node_entry.py` | 文件哈希比对实现增量更新，相同文档自动跳过 |
 
 ---
 
@@ -362,7 +385,11 @@ curl http://localhost:8100/api/import/documents
 - [x] 混合向量检索 + HyDE + MCP 联网搜索
 - [x] RRF 多路融合 + Rerank 重排序
 - [x] SSE 流式问答 + 会话历史管理
-- [ ] 权限管理与多租户支持
+- [x] 答案溯源可视化（来源文档片段 + 相关度评分）
+- [x] 用户反馈闭环（👍👎 + 文字评论 → MongoDB）
+- [x] 多轮追问意图识别（复用上一轮主体，跳过重复提取）
+- [x] 文档增量更新（SHA256 哈希去重，避免重复入库）
+- [x] 基于 owner 的权限隔离（查询自动过滤私有/公开文档）
 - [ ] 知识图谱增强检索
 - [ ] 前端 UI 优化
 
