@@ -395,16 +395,7 @@ curl http://localhost:8100/api/import/documents
 
 ---
 
-## 📜 License
-
-MIT License
-
----
-
 <p align="center">
   <sub>Made with ❤️ by BOSS Team</sub>
 </p>
 
----
-
-> 本内容由 Coze AI 生成，请遵循相关法律法规及《人工智能生成合成内容标识办法》使用与传播。
